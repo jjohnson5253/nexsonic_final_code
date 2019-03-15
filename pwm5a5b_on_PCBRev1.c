@@ -80,8 +80,7 @@
 #define EPWM2_MAX_CMPB     1950U
 #define EPWM2_MIN_CMPB       50U
 
-//#define EPWM5_TIMER_TBPRD  2000U // about 25kHz
-#define EPWM5_TIMER_TBPRD  850 // about 25kHz
+#define EPWM5_TIMER_TBPRD  850 // about 56kHz
 #define EPWM5_MAX_CMPA     425 // 50% duty cycle
 #define EPWM5_MIN_CMPA     425
 #define EPWM5_MAX_CMPB     425
@@ -152,7 +151,7 @@ void main(void)
     int dutyCycle = 425;
     double dutyCycleTrack = 0.5;
     int dutyCyclePrint = 0;
-    int period = 850;
+    unsigned int period = 850;
     int frequencyPrint = 0;
     int guiState = 0;
 
@@ -298,12 +297,11 @@ void main(void)
         //itoa(50, test, 10);
         //SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 5);
 
-
         // print duty cycle and frequency
         //dutyCyclePrint = 100 - (100 * dutyCycleTrack);
         //TODO: convert int to string for printing. Unable to use sprintf or itoa.
         //TODO: fix freq calculation getting overflow or something (get -9000 instead of 56000)
-        //frequencyPrint = (period / 1000) * 66;  // 66 is the constant I calculated to find frequency from period. Since 850counts = ~56000Hz.
+        frequencyPrint = period * 66;  // 66 is the constant I calculated to find frequency from period. Since 850counts = ~56000Hz.
 
         switch(guiState){
         case 0:
@@ -357,7 +355,7 @@ void main(void)
                    GPIO_writePin(DEVICE_GPIO_PIN_LED1, 0);
                    // decrease duty cycle
                    if(dutyCycleTrack < .90){
-                       dutyCycleTrack = dutyCycleTrack + 0.05;
+                       dutyCycleTrack = dutyCycleTrack + 0.005;
                    }
                    dutyCycle = period * dutyCycleTrack;
                    EPWM_setCounterCompareValue(EPWM5_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
@@ -367,8 +365,8 @@ void main(void)
                    // Turn off LED
                    GPIO_writePin(DEVICE_GPIO_PIN_LED1, 1);
                    // increase duty cycle
-                   if(dutyCycleTrack > .10){
-                       dutyCycleTrack = dutyCycleTrack - 0.05;
+                   if(dutyCycleTrack > .001){
+                       dutyCycleTrack = dutyCycleTrack - 0.005;
                    }
                    dutyCycle = period * dutyCycleTrack;
                    EPWM_setCounterCompareValue(EPWM5_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);

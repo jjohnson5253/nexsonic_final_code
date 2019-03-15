@@ -125,34 +125,34 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-pwm5a5b_on_launchpad.out \
+pwm5a5b_on_PCBRev1.out \
 
 EXE_OUTPUTS__QUOTED += \
-"pwm5a5b_on_launchpad.out" \
+"pwm5a5b_on_PCBRev1.out" \
 
 BIN_OUTPUTS += \
-pwm5a5b_on_launchpad.hex \
+pwm5a5b_on_PCBRev1.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"pwm5a5b_on_launchpad.hex" \
+"pwm5a5b_on_PCBRev1.hex" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "pwm5a5b_on_launchpad.out"
+	@$(MAKE) --no-print-directory -Onone "pwm5a5b_on_PCBRev1.out"
 
 # Tool invocations
-pwm5a5b_on_launchpad.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
+pwm5a5b_on_PCBRev1.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: C2000 Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=DEBUG --define=_LAUNCHXL_F280049C --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"pwm5a5b_on_launchpad.map" --stack_size=0x100 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="pwm5a5b_on_launchpad_linkInfo.xml" --entry_point=code_start --rom_model -o "pwm5a5b_on_launchpad.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=DEBUG --define=_LAUNCHXL_F280049C --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"pwm5a5b_on_PCBRev1.map" --stack_size=0x100 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="pwm5a5b_on_PCBRev1_linkInfo.xml" --entry_point=code_start --rom_model -o "pwm5a5b_on_PCBRev1.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
-pwm5a5b_on_launchpad.hex: $(EXE_OUTPUTS)
+pwm5a5b_on_PCBRev1.hex: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: C2000 Hex Utility'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "pwm5a5b_on_launchpad.hex" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "pwm5a5b_on_PCBRev1.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
 
