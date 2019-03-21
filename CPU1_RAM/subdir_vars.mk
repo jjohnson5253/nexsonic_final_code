@@ -12,21 +12,21 @@ LIB_SRCS += \
 ../driverlib.lib 
 
 C_SRCS += \
-../pwm5a5b_on_launchpad.c 
+../pwm5a5b_on_PCBRev1.c 
 
 C_DEPS += \
-./pwm5a5b_on_launchpad.d 
+./pwm5a5b_on_PCBRev1.d 
 
 OBJS += \
-./pwm5a5b_on_launchpad.obj 
+./pwm5a5b_on_PCBRev1.obj 
 
 OBJS__QUOTED += \
-"pwm5a5b_on_launchpad.obj" 
+"pwm5a5b_on_PCBRev1.obj" 
 
 C_DEPS__QUOTED += \
-"pwm5a5b_on_launchpad.d" 
+"pwm5a5b_on_PCBRev1.d" 
 
 C_SRCS__QUOTED += \
-"../pwm5a5b_on_launchpad.c" 
+"../pwm5a5b_on_PCBRev1.c" 
 
 

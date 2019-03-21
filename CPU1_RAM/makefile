@@ -10,7 +10,7 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
-"./pwm5a5b_on_launchpad.obj" \
+"./pwm5a5b_on_PCBRev1.obj" \
 "./device/device.obj" \
 "./device/f28004x_codestartbranch.obj" \
 "../280049C_RAM_lnk.cmd" \
@@ -159,8 +159,8 @@ pwm5a5b_on_PCBRev1.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "pwm5a5b_on_launchpad.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
-	-$(RM) "pwm5a5b_on_launchpad.d" "device\device.d" 
+	-$(RM) "pwm5a5b_on_PCBRev1.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
+	-$(RM) "pwm5a5b_on_PCBRev1.d" "device\device.d" 
 	-$(RM) "device\f28004x_codestartbranch.d" 
 	-@echo 'Finished clean'
 	-@echo ' '

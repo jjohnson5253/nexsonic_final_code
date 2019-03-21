@@ -208,22 +208,22 @@ void main(void)
     GPIO_setPinConfig(GPIO_9_EPWM5B);
 
     //
-    // GPIO28 is the SCI Rx pin.
+    // GPIO3 is the SCI Rx pin.
     //
-    GPIO_setMasterCore(28, GPIO_CORE_CPU1);
-    GPIO_setPinConfig(GPIO_28_SCIRXDA);
-    GPIO_setDirectionMode(28, GPIO_DIR_MODE_IN);
-    GPIO_setPadConfig(28, GPIO_PIN_TYPE_STD);
-    GPIO_setQualificationMode(28, GPIO_QUAL_ASYNC);
+    GPIO_setMasterCore(3, GPIO_CORE_CPU1);
+    GPIO_setPinConfig(GPIO_3_SCIRXDA);
+    GPIO_setDirectionMode(3, GPIO_DIR_MODE_IN);
+    GPIO_setPadConfig(3, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(3, GPIO_QUAL_ASYNC);
 
     //
-    // GPIO29 is the SCI Tx pin.
+    // GPIO2 is the SCI Tx pin.
     //
-    GPIO_setMasterCore(29, GPIO_CORE_CPU1);
-    GPIO_setPinConfig(GPIO_29_SCITXDA);
-    GPIO_setDirectionMode(29, GPIO_DIR_MODE_OUT);
-    GPIO_setPadConfig(29, GPIO_PIN_TYPE_STD);
-    GPIO_setQualificationMode(29, GPIO_QUAL_ASYNC);
+    GPIO_setMasterCore(2, GPIO_CORE_CPU1);
+    GPIO_setPinConfig(GPIO_2_SCITXDA);
+    GPIO_setDirectionMode(2, GPIO_DIR_MODE_OUT);
+    GPIO_setPadConfig(2, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(2, GPIO_QUAL_ASYNC);
 
     // set GPIOs for LEDs
     GPIO_setPadConfig(DEVICE_GPIO_PIN_LED1, GPIO_PIN_TYPE_STD);
@@ -337,9 +337,9 @@ void main(void)
             break;
 
         case 1:
-            msg = "\r\n 1. Decrease duty cycle \n\0";
+            msg = "\r\n 1. Increase duty cycle \n\0";
             SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 27);
-            msg = "\r\n 2. Increase duty cycle \n\0";
+            msg = "\r\n 2. Decrease duty cycle \n\0";
             SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 27);
             msg = "\r\n 3. Go back \n\0";
             SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 13);
