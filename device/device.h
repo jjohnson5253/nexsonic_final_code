@@ -246,10 +246,7 @@
 //
 #define DEVICE_OSCSRC_FREQ          20000000U
 
-//
-// Define to pass to SysCtl_setClock(). Will configure the clock as follows:
-// PLLSYSCLK = 20MHz (XTAL_OSC) * 10 (IMULT) * 1 (FMULT) / 2 (PLLCLK_BY_2)
-//
+// changed
 #define DEVICE_SETCLOCK_CFG         (SYSCTL_OSCSRC_OSC2 | SYSCTL_IMULT(19) |  \
                                      SYSCTL_FMULT_1_4 | SYSCTL_SYSDIV(2) |   \
                                      SYSCTL_PLL_ENABLE)
