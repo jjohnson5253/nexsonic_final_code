@@ -199,6 +199,27 @@ void run_freq_sweep_menu(){
 
            uint16_t printCount = 0;
 
+           // print a bunch of new lines to clear out window
+           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+
+           // speech bubble for sonic
+           msg = "\r\n           ------------- \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n          < Sweeping... > \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 28);
+           msg = "\r\n           ------------- \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n              /          \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n             /           \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+
+           // draw sonic with mouth open and tell user "sweeping"
+           drawSonic(0);
+
            // sweep
            while(period > 2045){
 
@@ -218,17 +239,6 @@ void run_freq_sweep_menu(){
 
                // wait 0.06 seconds (I think)
                DEVICE_DELAY_US(100000);
-
-               // cycle print count to animate messages
-               if (printCount < 3){
-                   printCount++;
-               }
-               else{
-                   printCount = 0;
-               }
-
-               // print out sweeping animation for printCount frame
-               sweepingAnimation(printCount);
            }
            break;
        case 50  :
@@ -290,6 +300,7 @@ void drawSonic(uint16_t smile){
 
     // https://www.asciiart.eu/video-games/sonic-the-hedgehog
 
+    // draw sonic
     msg = "\r\n     ___------__        \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n |\\__-- /\\       _-   \0";
@@ -322,23 +333,15 @@ void drawSonic(uint16_t smile){
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n \\_-\\_____/  \\-\\      \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n \\_-\\_____/  \\-\\      \0";
+    msg = "\r\n       // \\\\--\\|           \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n  // \\\\--\\|           \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n ____//  ||_          \0";
+    msg = "\r\n  ____//  ||_          \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n /_____\\ /___\\        \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 }
 
 void sweepingAnimation(uint16_t printCount){
-
-    // print a bunch of new lines to clear out window
-    msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 
     // draw sonic
     msg = "\r\n     ___------__        \0";
