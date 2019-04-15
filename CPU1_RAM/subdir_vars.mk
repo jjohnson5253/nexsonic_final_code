@@ -12,21 +12,27 @@ LIB_SRCS += \
 ../driverlib.lib 
 
 C_SRCS += \
+../gui.c \
 ../main_code_final_board.c 
 
 C_DEPS += \
+./gui.d \
 ./main_code_final_board.d 
 
 OBJS += \
+./gui.obj \
 ./main_code_final_board.obj 
 
 OBJS__QUOTED += \
+"gui.obj" \
 "main_code_final_board.obj" 
 
 C_DEPS__QUOTED += \
+"gui.d" \
 "main_code_final_board.d" 
 
 C_SRCS__QUOTED += \
+"../gui.c" \
 "../main_code_final_board.c" 
 
 

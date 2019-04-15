@@ -10,18 +10,28 @@
 #include <stdio.h>
 #include "sci.h"
 
+// Custom includes
+#include "gui.h"
 
 //
 // Defines
 //
-#define EPWM8_TIMER_TBPRD  850 // about 56kHz
-#define EPWM8_MAX_CMPA     425 // 50% duty cycle
-#define EPWM8_MIN_CMPA     425
-#define EPWM8_MAX_CMPB     425
-#define EPWM8_MIN_CMPB     425
+#define EPWM8_TIMER_TBPRD  2080 // about 56kHz
+#define EPWM8_MAX_CMPA     1040 // 50% duty cycle
+#define EPWM8_MIN_CMPA     1040
+#define EPWM8_MAX_CMPB     1040
+#define EPWM8_MIN_CMPB     1040
 
 #define EPWM_CMP_UP           1U
 #define EPWM_CMP_DOWN         0U
+
+#define REFERENCE_VDAC      0
+#define REFERENCE_VREF      1
+#define DACA         1
+#define DACB         2
+
+#define REFERENCE            REFERENCE_VREF
+#define DAC_NUM                DACA
 
 //
 // Globals
@@ -42,6 +52,8 @@ typedef struct
 // Globals to hold the ePWM information used in this example
 //
 epwmInformation epwm8Info;
+epwmInformation epwm8Info;
+
 
 //
 // Function Prototypes
@@ -56,15 +68,6 @@ void itoa(long unsigned int value, char* result, int base);
 //
 void main(void)
 {
-
-    // vars
-    uint16_t receivedChar;
-    unsigned char *msg;
-
-    int dutyCycle = 425;
-    double dutyCycleTrack = 0.5;
-    unsigned int period = 850;
-    int guiState = 0;
 
     // initializations
     Device_init();
@@ -173,6 +176,12 @@ void main(void)
     Interrupt_enable(INT_EPWM8);
 
     //
+    // Set up ADCs, initializing the SOCs to be triggered by software
+    //
+    initADCs();
+    initADCSOCs();
+
+    //
     // Enable Global Interrupt (INTM) and realtime interrupt (DBGM)
     //
     EINT;
@@ -183,136 +192,9 @@ void main(void)
     //
     for(;;)
     {
-        // print a bunch of new lines to clear out window
-        msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        // run gui code
+        run_gui();
 
-        switch(guiState){
-        case 0:
-            msg = "\r\n\nChoose an option: \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 23);
-            msg = "\r\n 1. Change duty cycle \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-            msg = "\r\n 2. Change frequency \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 24);
-            msg = "\r\n 3. Power off \0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 15);
-            msg = "\r\n\nEnter number: \0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
-
-            // Read a character from the FIFO.
-            receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-
-            switch(receivedChar) {
-               case 49  :
-                   guiState = 1;
-                   break;
-               case 50  :
-                   guiState = 2;
-                   break;
-               case 51  :
-                   // Enter halt mode.
-                   SysCtl_enterHaltMode();
-               default :
-                   msg = "\r\nPlease choose one of the options\n\0";
-                   SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
-                   break;
-            }
-            break;
-
-        case 1:
-            msg = "\r\n 1. Increase duty cycle \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-            msg = "\r\n 2. Decrease duty cycle \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-            msg = "\r\n 3. Go back \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-            msg = "\r\n\nEnter number: \0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
-
-            // Read a character from the FIFO.
-            receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-
-            switch(receivedChar) {
-               case 49  :
-                   // decrease duty cycle
-                   if(dutyCycleTrack < .90){
-                       dutyCycleTrack = dutyCycleTrack + 0.005;
-                   }
-                   dutyCycle = period * dutyCycleTrack;
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
-                   break;
-               case 50  :
-                   // increase duty cycle
-                   if(dutyCycleTrack > .001){
-                       dutyCycleTrack = dutyCycleTrack - 0.005;
-                   }
-                   dutyCycle = period * dutyCycleTrack;
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
-                   break;
-               case 51  :
-                   // return to home
-                   guiState = 0;
-                   break;
-               default :
-                   msg = "\r\nPlease choose one of the options\n\0";
-                   SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
-            }
-            break;
-
-        case 2:
-            msg = "\r\n 1. Decrease frequency \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 26);
-            msg = "\r\n 2. Increase frequency \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 26);
-            msg = "\r\n 3. Go back \n\0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-            msg = "\r\n\nEnter number: \0";
-            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
-
-            // Read a character from the FIFO.
-            receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-
-            switch(receivedChar) {
-               case 49  :
-                   if(period < 1500){
-                       // decrease frequency increase period
-                       period = period + 1;
-                   }
-                   // update duty cycle to new period
-                   dutyCycle = period * dutyCycleTrack;
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
-                   // update period
-                   EPWM_setTimeBasePeriod(EPWM8_BASE, period);
-                   break;
-               case 50  :
-                   if(period > 500){
-                       // increase frequency decrease period
-                       period = period - 1;
-                   }
-                   // update duty cycle to new period
-                   dutyCycle = period * dutyCycleTrack;
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-                   EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
-                   // update period
-                   EPWM_setTimeBasePeriod(EPWM8_BASE, period);
-                   break;
-               case 51  :
-                   guiState = 0;
-                   break;
-               default :
-                   msg = "\r\nPlease choose one of the options\n\0";
-                   SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
-            }
-            break;
-
-        default:
-            guiState = 0;
-            break;
-        }
         NOP;
     }
 }
@@ -416,4 +298,77 @@ void initEPWM8(void)
     epwm8Info.epwmMinCompA = EPWM8_MIN_CMPA;
     epwm8Info.epwmMaxCompB = EPWM8_MAX_CMPB;
     epwm8Info.epwmMinCompB = EPWM8_MIN_CMPB;
+}
+
+//
+// initADCs - Function to configure and power up ADCs A and B.
+//
+void initADCs(void)
+{
+    //
+    // Setup VREF as internal
+    //
+    ADC_setVREF(ADCB_BASE, ADC_REFERENCE_EXTERNAL, ADC_REFERENCE_3_3V);
+    ADC_setVREF(ADCC_BASE, ADC_REFERENCE_EXTERNAL, ADC_REFERENCE_3_3V);
+
+    //
+    // Set ADCCLK divider to /4
+    //
+    ADC_setPrescaler(ADCB_BASE, ADC_CLK_DIV_4_0);
+    ADC_setPrescaler(ADCC_BASE, ADC_CLK_DIV_4_0);
+
+    //
+    // Set pulse positions to late
+    //
+    ADC_setInterruptPulseMode(ADCB_BASE, ADC_PULSE_END_OF_CONV);
+    ADC_setInterruptPulseMode(ADCC_BASE, ADC_PULSE_END_OF_CONV);
+
+    //
+    // Power up the ADCs and then delay for 1 ms
+    //
+    ADC_enableConverter(ADCB_BASE);
+    ADC_enableConverter(ADCC_BASE);
+
+    DEVICE_DELAY_US(1000);
+}
+
+//
+// initADCSOCs - Function to configure SOCs 0 and 1 of ADCs A and B.
+//
+void initADCSOCs(void)
+{
+    //
+    // Configure SOCs of ADCA
+    // - SOC0 will convert pin A0 with a sample window of 10 SYSCLK cycles.
+    // - SOC1 will convert pin A1 with a sample window of 10 SYSCLK cycles.
+    //
+    ADC_setupSOC(ADCB_BASE, ADC_SOC_NUMBER2, ADC_TRIGGER_SW_ONLY,
+                 ADC_CH_ADCIN2, 10);
+
+    //
+    // Set SOC1 to set the interrupt 1 flag. Enable the interrupt and make
+    // sure its flag is cleared.
+    //
+    ADC_setInterruptSource(ADCB_BASE, ADC_INT_NUMBER1, ADC_SOC_NUMBER2);
+    ADC_enableInterrupt(ADCB_BASE, ADC_INT_NUMBER1);
+    ADC_clearInterruptStatus(ADCB_BASE, ADC_INT_NUMBER1);
+
+    //
+    // Configure SOCs of ADCB
+    // - SOC0 will convert pin B0 with a sample window of 10 SYSCLK cycles.
+    // - SOC1 will convert pin B1 with a sample window of 10 SYSCLK cycles.
+    //
+    ADC_setupSOC(ADCC_BASE, ADC_SOC_NUMBER0, ADC_TRIGGER_SW_ONLY,
+                 ADC_CH_ADCIN0, 10);
+    ADC_setupSOC(ADCC_BASE, ADC_SOC_NUMBER6, ADC_TRIGGER_SW_ONLY,
+                 ADC_CH_ADCIN6, 10);
+
+    //
+    // Set SOC1 to set the interrupt 1 flag. Enable the interrupt and make
+    // sure its flag is cleared.
+    //
+    ADC_setInterruptSource(ADCC_BASE, ADC_INT_NUMBER1, ADC_SOC_NUMBER6);
+    ADC_enableInterrupt(ADCC_BASE, ADC_INT_NUMBER1);
+    ADC_clearInterruptStatus(ADCC_BASE, ADC_INT_NUMBER1);
+
 }

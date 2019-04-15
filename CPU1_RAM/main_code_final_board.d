@@ -82,6 +82,7 @@ main_code_final_board.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/in
 main_code_final_board.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/_ti_config.h
 main_code_final_board.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/linkage.h
 main_code_final_board.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/stdarg.h
+main_code_final_board.obj: ../gui.h
 
 ../main_code_final_board.c: 
 C:/Users/jake/workspace_v8/main_code_final_board/device/driverlib.h: 
@@ -165,3 +166,4 @@ C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/stdio.h:
 C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/_ti_config.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/linkage.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/stdarg.h: 
+../gui.h: 

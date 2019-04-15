@@ -10,6 +10,7 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
+"./gui.obj" \
 "./main_code_final_board.obj" \
 "./device/device.obj" \
 "./device/f28004x_codestartbranch.obj" \
@@ -159,8 +160,8 @@ main_code_final_board.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main_code_final_board.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
-	-$(RM) "main_code_final_board.d" "device\device.d" 
+	-$(RM) "gui.obj" "main_code_final_board.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
+	-$(RM) "gui.d" "main_code_final_board.d" "device\device.d" 
 	-$(RM) "device\f28004x_codestartbranch.d" 
 	-@echo 'Finished clean'
 	-@echo ' '

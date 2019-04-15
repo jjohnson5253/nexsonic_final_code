@@ -242,20 +242,23 @@
 //
 //*****************************************************************************
 //
-// 20MHz XTAL on controlCARD. For use with SysCtl_getClock().
+// 10MHz osc2 on controlCARD. For use with SysCtl_getClock().
 //
-#define DEVICE_OSCSRC_FREQ          20000000U
+#define DEVICE_OSCSRC_FREQ          10000000U
 
 // changed
-#define DEVICE_SETCLOCK_CFG         (SYSCTL_OSCSRC_OSC2 | SYSCTL_IMULT(19) |  \
-                                     SYSCTL_FMULT_1_4 | SYSCTL_SYSDIV(2) |   \
+#define DEVICE_SETCLOCK_CFG         (SYSCTL_OSCSRC_OSC2 | SYSCTL_IMULT(23) |  \
+                                     SYSCTL_FMULT_1_4 | SYSCTL_SYSDIV(1) |   \
                                      SYSCTL_PLL_ENABLE)
+//#define DEVICE_SETCLOCK_CFG         (SYSCTL_OSCSRC_OSC2 | SYSCTL_IMULT(25) |  \
+//                                     SYSCTL_FMULT_1_4 | SYSCTL_SYSDIV(1) |   \
+//                                     SYSCTL_PLL_ENABLE)
 
 //
 // 100MHz SYSCLK frequency based on the above DEVICE_SETCLOCK_CFG. Update the
 // code below if a different clock configuration is used!
 //
-#define DEVICE_SYSCLK_FREQ          ((DEVICE_OSCSRC_FREQ * 10 * 1) / 2)
+#define DEVICE_SYSCLK_FREQ          (DEVICE_OSCSRC_FREQ * 23 * 1)
 
 //
 // 25MHz LSPCLK frequency based on the above DEVICE_SYSCLK_FREQ and a default
