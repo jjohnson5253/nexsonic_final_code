@@ -50,8 +50,11 @@ SECTIONS
    .reset           : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
 
    .stack           : > RAMM1,     PAGE = 1
-   .ebss            : > RAMLS5,    PAGE = 1
-   .econst          : > RAMLS5,    PAGE = 1
+   // if run out of memory, just keep adding RAMLS04 instead of whatever it is linked to and change page to 0
+   .ebss            : > RAMLS04,   PAGE = 0
+//   .ebss            : > RAMLS5,    PAGE = 1
+   .econst          : > RAMLS04,    PAGE = 0
+//   .econst          : > RAMLS5,    PAGE = 1
    .esysmem         : > RAMLS5,    PAGE = 1
 
    ramgs0           : > RAMGS0,    PAGE = 1

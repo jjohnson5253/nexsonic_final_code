@@ -33,8 +33,6 @@ void run_gui(){
     msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 
-    drawSonic();
-
     switch(guiState){
     case 0:
         run_main_menu();
@@ -136,7 +134,7 @@ void run_duty_cycle_menu(){
     }
 }
 
-uint16_t run_frequency_menu(){
+void run_frequency_menu(){
 
     msg = "\r\n 1. Decrease frequency \n\0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 26);
@@ -180,7 +178,7 @@ uint16_t run_frequency_menu(){
     }
 }
 
-uint16_t run_freq_sweep_menu(){
+void run_freq_sweep_menu(){
 
     // 55khz = 2119 counts, 57kHz = 2045 counts
     msg = "\r\n 1. Sweep from 55kHz to 57kHz \n\0";
@@ -199,20 +197,38 @@ uint16_t run_freq_sweep_menu(){
            period = 2119;
            EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
+           uint16_t printCount = 0;
+
            // sweep
            while(period > 2045){
+
                // read ADC
                testAvg = avg_ADC();
+
                // increase frequency
                period = period - 1;
+
                // update duty cycle to new period
                dutyCycle = period * dutyCycleTrack;
                EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
                EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+
                // update period
                EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+
                // wait 0.06 seconds (I think)
                DEVICE_DELAY_US(100000);
+
+               // cycle print count to animate messages
+               if (printCount < 3){
+                   printCount++;
+               }
+               else{
+                   printCount = 0;
+               }
+
+               // print out sweeping animation for printCount frame
+               sweepingAnimation(printCount);
            }
            break;
        case 50  :
@@ -270,7 +286,7 @@ void read_ADC(){
     adcCResult6 = ADC_readResult(ADCCRESULT_BASE, ADC_SOC_NUMBER6);
 }
 
-void drawSonic(){
+void drawSonic(uint16_t smile){
 
     // https://www.asciiart.eu/video-games/sonic-the-hedgehog
 
@@ -284,28 +300,101 @@ void drawSonic(){
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n |  o|  0|__     --_    \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n \\\\____-- __ \\   ___-\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n (@@    __/  / /_       \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    // change sonic's mouth
+    if(smile == 0){
+        msg = "\r\n \\\\____-- __ \\   ___-\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        msg = "\r\n (@@    []   / /_       \0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    }
+    else{
+        msg = "\r\n \\\\____-- __ \\   ___-\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        msg = "\r\n (@@    __/  / /_       \0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    }
     msg = "\r\n  -_____---   --_       \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n   //  \\ \\\\   ___-   \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n //|\\__/  \\\\  \\     \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-
-
-        // for some reason I run out of memory if I use this bottom half
-//    msg = "\r\n \\_-\\_____/  \\-\\      \0";
-//    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-//    msg = "\r\n \\_-\\_____/  \\-\\      \0";
-//    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-//    msg = "\r\n  // \\\\--\\|           \0";
-//    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-//    msg = "\r\n ____//  ||_          \0";
-//    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-//    msg = "\r\n /_____\\ /___\\        \0";
-//    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n \\_-\\_____/  \\-\\      \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n \\_-\\_____/  \\-\\      \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n  // \\\\--\\|           \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n ____//  ||_          \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n /_____\\ /___\\        \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 }
 
+void sweepingAnimation(uint16_t printCount){
+
+    // print a bunch of new lines to clear out window
+    msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+
+    // draw sonic
+    msg = "\r\n     ___------__        \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n |\\__-- /\\       _-   \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n |/    __      -        \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n //\\  /  \\    /__     \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n |  o|  0|__     --_    \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    // change sonic's mouth
+    if(printCount == 0){
+        msg = "\r\n \\\\____-- __ \\   ___-\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        msg = "\r\n (@@    []   / /_       \0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    }
+    else{
+        msg = "\r\n \\\\____-- __ \\   ___-\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        msg = "\r\n (@@    __/  / /_       \0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    }
+    msg = "\r\n  -_____---   --_       \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n   //  \\ \\\\   ___-   \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n //|\\__/  \\\\  \\     \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n \\_-\\_____/  \\-\\      \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n \\_-\\_____/  \\-\\      \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n  // \\\\--\\|           \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n ____//  ||_          \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    msg = "\r\n /_____\\ /___\\        \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+
+    // update ellipsis (...) frame
+    switch(printCount){
+    case 0:
+        msg = "\r\n Sweeping. \n\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 14);
+        break;
+    case 1:
+        msg = "\r\n Sweeping.. \n\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 15);
+        break;
+    case 2:
+        msg = "\r\n Sweeping... \n\0";
+        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 16);
+        break;
+    }
+}
