@@ -16,50 +16,28 @@
 //
 // Defines
 //
+// epwm8ab for pushpull cha and chb
 #define EPWM8_TIMER_TBPRD  2080 // about 56kHz
 #define EPWM8_MAX_CMPA     1040 // 50% duty cycle
 #define EPWM8_MIN_CMPA     1040
 #define EPWM8_MAX_CMPB     1040
 #define EPWM8_MIN_CMPB     1040
 
+// epwm3a for buzzer
+#define EPWM3_TIMER_TBPRD  814000 // about 56kHz
+#define EPWM3_MAX_CMPA     1040 // 50% duty cycle
+#define EPWM3_MIN_CMPA     1040
+#define EPWM3_MAX_CMPB     1040
+#define EPWM3_MIN_CMPB     1040
+
 #define EPWM_CMP_UP           1U
 #define EPWM_CMP_DOWN         0U
-
-#define REFERENCE_VDAC      0
-#define REFERENCE_VREF      1
-#define DACA         1
-#define DACB         2
-
-#define REFERENCE            REFERENCE_VREF
-#define DAC_NUM                DACA
-
-//
-// Globals
-//
-typedef struct
-{
-    uint32_t epwmModule;
-    uint16_t epwmCompADirection;
-    uint16_t epwmCompBDirection;
-    uint16_t epwmTimerIntCount;
-    uint16_t epwmMaxCompA;
-    uint16_t epwmMinCompA;
-    uint16_t epwmMaxCompB;
-    uint16_t epwmMinCompB;
-}epwmInformation;
-
-//
-// Globals to hold the ePWM information used in this example
-//
-epwmInformation epwm8Info;
-epwmInformation epwm8Info;
-
 
 //
 // Function Prototypes
 //
 void initEPWM8(void);
-__interrupt void epwm8ISR(void);
+void initEPWM3(void);
 
 void itoa(long unsigned int value, char* result, int base);
 
@@ -76,10 +54,6 @@ void main(void)
     // initialize interrupts
     Interrupt_initModule();
     Interrupt_initVectorTable();
-    Interrupt_register(INT_EPWM8, &epwm8ISR);
-
-    //////////////////////////////////////////////////////////////////////////////////
-    // GPIO configurations
 
     // Configure GPIO14/15 as EPWM8A/8B pins respectively
     GPIO_setPadConfig(14, GPIO_PIN_TYPE_STD);
@@ -87,18 +61,18 @@ void main(void)
     GPIO_setPadConfig(15, GPIO_PIN_TYPE_STD);
     GPIO_setPinConfig(GPIO_15_EPWM8B);
 
-    //
+    // Configure GPIO4 as EPWM3A pin
+    GPIO_setPadConfig(4, GPIO_PIN_TYPE_STD);
+    GPIO_setPinConfig(GPIO_4_EPWM3A);
+
     // GPIO3 is the SCI Rx pin.
-    //
     GPIO_setMasterCore(57, GPIO_CORE_CPU1);
     GPIO_setPinConfig(GPIO_57_SCIRXDB);
     GPIO_setDirectionMode(57, GPIO_DIR_MODE_IN);
     GPIO_setPadConfig(57, GPIO_PIN_TYPE_STD);
     GPIO_setQualificationMode(57, GPIO_QUAL_ASYNC);
 
-    //
     // GPIO2 is the SCI Tx pin.
-    //
     GPIO_setMasterCore(56, GPIO_CORE_CPU1);
     GPIO_setPinConfig(GPIO_56_SCITXDB);
     GPIO_setDirectionMode(56, GPIO_DIR_MODE_OUT);
@@ -128,16 +102,10 @@ void main(void)
     GPIO_setDirectionMode(3, GPIO_DIR_MODE_OUT);
     GPIO_writePin(3, 1);
 
-    //////////////////////////////////////////////////////////////////////////////////
-
-    //
     // Initialize SCIB and its FIFO.
-    //
     SCI_performSoftwareReset(SCIB_BASE);
 
-    //
     // Configure SCIB for echoback.
-    //
     SCI_setConfig(SCIB_BASE, DEVICE_LSPCLK_FREQ, 9600, (SCI_CONFIG_WLEN_8 |
                                                         SCI_CONFIG_STOP_ONE |
                                                         SCI_CONFIG_PAR_NONE));
@@ -157,23 +125,15 @@ void main(void)
         SCI_lockAutobaud(SCIB_BASE);
     #endif
 
-    //
     // Disable sync(Freeze clock to PWM as well)
-    //
     SysCtl_disablePeripheral(SYSCTL_PERIPH_CLK_TBCLKSYNC);
 
-    // init for pwm8a and b
+    // init for pwm8a and b, and pwm3a
     initEPWM8();
+    initEPWM3();
 
-    //
     // Enable sync and clock to PWM
-    //
     SysCtl_enablePeripheral(SYSCTL_PERIPH_CLK_TBCLKSYNC);
-
-    //
-    // Enable ePWM interrupts
-    //
-    Interrupt_enable(INT_EPWM8);
 
     //
     // Set up ADCs, initializing the SOCs to be triggered by software
@@ -199,37 +159,15 @@ void main(void)
     }
 }
 
-//
-// EPWM8ISR - ePWM 8 ISR
-//
-__interrupt void epwm8ISR(void)
-{
-    //
-    // Clear INT flag for this timer
-    //
-    EPWM_clearEventTriggerInterruptFlag(EPWM8_BASE);
-
-    //
-    // Acknowledge interrupt group
-    //
-    Interrupt_clearACKGroup(INTERRUPT_ACK_GROUP3);
-}
-
-//
 // initEPWM8 - Configure EPWM5
-//
 void initEPWM8(void)
 {
-    //
     // Set-up TBCLK
-    //
     EPWM_setTimeBasePeriod(EPWM8_BASE, EPWM8_TIMER_TBPRD);
     EPWM_setPhaseShift(EPWM8_BASE, 0U);
     EPWM_setTimeBaseCounter(EPWM8_BASE, 0U);
 
-    //
     // Set Compare values
-    //
     EPWM_setCounterCompareValue(EPWM8_BASE,
                                 EPWM_COUNTER_COMPARE_A,
                                 EPWM8_MIN_CMPA);
@@ -237,18 +175,14 @@ void initEPWM8(void)
                                 EPWM_COUNTER_COMPARE_B,
                                 EPWM8_MAX_CMPB);
 
-    //
     // Set up counter mode
-    //
     EPWM_setTimeBaseCounterMode(EPWM8_BASE, EPWM_COUNTER_MODE_UP_DOWN);
     EPWM_disablePhaseShiftLoad(EPWM8_BASE);
     EPWM_setClockPrescaler(EPWM8_BASE,
                            EPWM_CLOCK_DIVIDER_1,
                            EPWM_HSCLOCK_DIVIDER_1);
 
-    //
     // Set up shadowing
-    //
     EPWM_setCounterCompareShadowLoadMode(EPWM8_BASE,
                                          EPWM_COUNTER_COMPARE_A,
                                          EPWM_COMP_LOAD_ON_CNTR_ZERO);
@@ -256,9 +190,8 @@ void initEPWM8(void)
                                          EPWM_COUNTER_COMPARE_B,
                                          EPWM_COMP_LOAD_ON_CNTR_ZERO);
 
-    //
     // Set actions
-    //
+    // pwm a
     EPWM_setActionQualifierAction(EPWM8_BASE,
                                   EPWM_AQ_OUTPUT_A,
                                   EPWM_AQ_OUTPUT_HIGH,
@@ -267,6 +200,7 @@ void initEPWM8(void)
                                   EPWM_AQ_OUTPUT_A,
                                   EPWM_AQ_OUTPUT_LOW,
                                   EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPA);
+    // pwm b
     EPWM_setActionQualifierAction(EPWM8_BASE,
                                   EPWM_AQ_OUTPUT_B,
                                   EPWM_AQ_OUTPUT_LOW,
@@ -275,29 +209,59 @@ void initEPWM8(void)
                                   EPWM_AQ_OUTPUT_B,
                                   EPWM_AQ_OUTPUT_HIGH,
                                   EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPB);
+}
 
-    //
-    // Interrupt where we will change the Compare Values
-    // Select INT on Time base counter zero event,
-    // Enable INT, generate INT on 3rd event
-    //
-    EPWM_setInterruptSource(EPWM8_BASE, EPWM_INT_TBCTR_ZERO);
-    EPWM_enableInterrupt(EPWM8_BASE);
-    EPWM_setInterruptEventCount(EPWM8_BASE, 3U);
+// initEPWM3 - Configure EPWM5
+void initEPWM3(void)
+{
+    // Set-up TBCLK
+    EPWM_setTimeBasePeriod(EPWM3_BASE, EPWM3_TIMER_TBPRD);
+    EPWM_setPhaseShift(EPWM3_BASE, 0U);
+    EPWM_setTimeBaseCounter(EPWM3_BASE, 0U);
 
-    //
-    // Information this example uses to keep track of the direction the
-    // CMPA/CMPB values are moving, the min and max allowed values and
-    // a pointer to the correct ePWM registers
-    //
-    epwm8Info.epwmCompADirection = EPWM_CMP_UP;
-    epwm8Info.epwmCompBDirection = EPWM_CMP_DOWN;
-    epwm8Info.epwmTimerIntCount = 0U;
-    epwm8Info.epwmModule = EPWM8_BASE;
-    epwm8Info.epwmMaxCompA = EPWM8_MAX_CMPA;
-    epwm8Info.epwmMinCompA = EPWM8_MIN_CMPA;
-    epwm8Info.epwmMaxCompB = EPWM8_MAX_CMPB;
-    epwm8Info.epwmMinCompB = EPWM8_MIN_CMPB;
+    // Set Compare values
+    EPWM_setCounterCompareValue(EPWM3_BASE,
+                                EPWM_COUNTER_COMPARE_A,
+                                EPWM3_MIN_CMPA);
+    EPWM_setCounterCompareValue(EPWM3_BASE,
+                                EPWM_COUNTER_COMPARE_B,
+                                EPWM3_MAX_CMPB);
+
+    // Set up counter mode
+    EPWM_setTimeBaseCounterMode(EPWM3_BASE, EPWM_COUNTER_MODE_UP_DOWN);
+    EPWM_disablePhaseShiftLoad(EPWM3_BASE);
+    EPWM_setClockPrescaler(EPWM3_BASE,
+                           EPWM_CLOCK_DIVIDER_1,
+                           EPWM_HSCLOCK_DIVIDER_1);
+
+    // Set up shadowing
+    EPWM_setCounterCompareShadowLoadMode(EPWM3_BASE,
+                                         EPWM_COUNTER_COMPARE_A,
+                                         EPWM_COMP_LOAD_ON_CNTR_ZERO);
+    EPWM_setCounterCompareShadowLoadMode(EPWM3_BASE,
+                                         EPWM_COUNTER_COMPARE_B,
+                                         EPWM_COMP_LOAD_ON_CNTR_ZERO);
+
+    // Set actions
+    // pwm a
+    // start off (both low output)
+    EPWM_setActionQualifierAction(EPWM3_BASE,
+                                  EPWM_AQ_OUTPUT_A,
+                                  EPWM_AQ_OUTPUT_LOW,
+                                  EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    EPWM_setActionQualifierAction(EPWM3_BASE,
+                                  EPWM_AQ_OUTPUT_A,
+                                  EPWM_AQ_OUTPUT_LOW,
+                                  EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPA);
+//    // pwm b
+//    EPWM_setActionQualifierAction(EPWM3_BASE,
+//                                  EPWM_AQ_OUTPUT_B,
+//                                  EPWM_AQ_OUTPUT_LOW,
+//                                  EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPB);
+//    EPWM_setActionQualifierAction(EPWM3_BASE,
+//                                  EPWM_AQ_OUTPUT_B,
+//                                  EPWM_AQ_OUTPUT_HIGH,
+//                                  EPWM_AQ_OUTPUT_ON_TIMEBASE_DOWN_CMPB);
 }
 
 //

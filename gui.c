@@ -197,7 +197,10 @@ void run_freq_sweep_menu(){
            period = 2119;
            EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
-           uint16_t printCount = 0;
+           // Beep buzzer once indicating start
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+           DEVICE_DELAY_US(250000);
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
            // print a bunch of new lines to clear out window
            msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
@@ -240,6 +243,16 @@ void run_freq_sweep_menu(){
                // wait 0.06 seconds (I think)
                DEVICE_DELAY_US(100000);
            }
+
+           // Beep buzzer twice indicating end
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+           DEVICE_DELAY_US(250000);
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+           DEVICE_DELAY_US(250000);
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+           DEVICE_DELAY_US(250000);
+           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+
            break;
        case 50  :
            guiState = 0;
