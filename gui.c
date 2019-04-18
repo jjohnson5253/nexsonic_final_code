@@ -32,6 +32,8 @@ uint16_t adcBResult2;
 uint16_t adcCResult0;
 uint16_t adcCResult6;
 
+uint16_t dacVal = 2048;
+
 int currADC_avg; // ADC B2
 int voltADC_avg; // ADC C0
 
@@ -65,6 +67,10 @@ void run_gui(){
         break;
 
     case 3:
+        run_dac_menu();
+        break;
+
+    case 4:
         run_freq_sweep_menu();
         break;
 
@@ -82,7 +88,9 @@ void run_main_menu(){
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
     msg = "\r\n 2. Change frequency \n\0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 24);
-    msg = "\r\n 3. Perform Sweep \0";
+    msg = "\r\n 3. Change DAC \n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
+    msg = "\r\n 4. Perform sweep \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 21);
     msg = "\r\n\nEnter number: \0";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
@@ -94,14 +102,26 @@ void run_main_menu(){
        case 49  :
            // duty cycle menu
            guiState = 1;
+
+           // Attempt to turn on and off system:
+           // Doesn't work... if watchdog not enabled, button will turn on pwm to 5kHz (way lower than expected) and sci won't work. If watchdog
+           // is enabled, then pwm just goes to 5kHz and sci stops working and button doesn't do anything
+//           SysCtl_enableLPMWakeupPin(33);
+//           SysCtl_enableWatchdogInHalt();
+//           SysCtl_enterHaltMode();
            break;
        case 50  :
            // freq menu
            guiState = 2;
            break;
        case 51  :
-           // freq sweep menu
+           // DAC menu
            guiState = 3;
+           break;
+       case 52  :
+           // freq sweep menu
+           guiState = 4;
+           break;
        default :
            msg = "\r\nPlease choose one of the options\n\0";
            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
@@ -195,6 +215,47 @@ void run_frequency_menu(){
            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
     }
 }
+
+void run_dac_menu(){
+
+    msg = "\r\n 1. Increase DAC \n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
+    msg = "\r\n 2. Decrease DAC \n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
+    msg = "\r\n 3. Go back \n\0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
+    msg = "\r\n\nEnter number: \0";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
+
+    // Read a character from the FIFO.
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+
+    switch(receivedChar) {
+       case 49  :
+           // Increase DAC
+           dacVal = dacVal + 50;
+
+           // set DAC
+           DAC_setShadowValue(DACA_BASE, dacVal);
+           DEVICE_DELAY_US(2);
+           break;
+       case 50  :
+           // Decrease DAC
+           dacVal = dacVal - 50;
+
+           // set DAC
+           DAC_setShadowValue(DACA_BASE, dacVal);
+           DEVICE_DELAY_US(2);
+           break;
+       case 51  :
+           guiState = 0;
+           break;
+       default :
+           msg = "\r\nPlease choose one of the options\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
+    }
+}
+
 
 void run_freq_sweep_menu(){
 
@@ -309,13 +370,28 @@ void run_freq_sweep_menu(){
            // turn off led1 to indicate end of sweep
            GPIO_writePin(5, 0);
 
-           // print 2 new lines
-           msg = "\r\n\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
+           // print a bunch of new lines to clear out window
+           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+
+           // speech bubble for sonic
+           msg = "\r\n           ------------- \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n          <    Done!    > \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 28);
+           msg = "\r\n           ------------- \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n              /          \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+           msg = "\r\n             /           \0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+
+           // draw sonic smiling and tell user "sweeping"
+           drawSonic(1);
 
            // write column headers
-           msg = "\r\nFrequency | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (mOhms) | Power (mW)\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 82);
+           msg = "\r\n\nFrequency | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (mOhms) | Power (mW)\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 84);
 
            // print out values
            int i;

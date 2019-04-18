@@ -25,6 +25,7 @@ void run_main_menu();
 void run_duty_cycle_menu();
 void run_frequency_menu();
 void run_freq_sweep_menu();
+void run_dac_menu();
 double avg_ADC();
 void read_ADC();
 void drawSonic();

@@ -38,6 +38,7 @@
 //
 void initEPWM8(void);
 void initEPWM3(void);
+void configureDAC(void);
 
 //
 // Main
@@ -139,21 +140,22 @@ void main(void)
     // Enable sync and clock to PWM
     SysCtl_enablePeripheral(SYSCTL_PERIPH_CLK_TBCLKSYNC);
 
-    //
     // Set up ADCs, initializing the SOCs to be triggered by software
-    //
     initADCs();
     initADCSOCs();
 
-    //
+    // configure dac
+    configureDAC();
+
+    // set DAC
+    DAC_setShadowValue(DACA_BASE, 2048);
+    DEVICE_DELAY_US(2);
+
     // Enable Global Interrupt (INTM) and realtime interrupt (DBGM)
-    //
     EINT;
     ERTM;
 
-    //
-    // IDLE loop. Just sit and loop forever (optional):
-    //
+    // main loop
     for(;;)
     {
         // run gui code
@@ -339,4 +341,32 @@ void initADCSOCs(void)
     ADC_enableInterrupt(ADCC_BASE, ADC_INT_NUMBER1);
     ADC_clearInterruptStatus(ADCC_BASE, ADC_INT_NUMBER1);
 
+}
+
+//
+// Configure DAC - Setup the reference voltage and output value for the DAC
+//
+void
+configureDAC(void)
+{
+    //
+    // Set VDAC as the DAC reference voltage.
+    // Edit here to use ADC VREF as the reference voltage.
+    //
+    DAC_setReferenceVoltage(DACA_BASE, DAC_REF_ADC_VREFHI);
+
+    //
+    // Enable the DAC output
+    //
+    DAC_enableOutput(DACA_BASE);
+
+    //
+    // Set the DAC shadow output to 0
+    //
+    DAC_setShadowValue(DACA_BASE, 0);
+
+    //
+    // Delay for buffered DAC to power up
+    //
+    DEVICE_DELAY_US(10);
 }

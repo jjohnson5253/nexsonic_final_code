@@ -17,6 +17,10 @@ PAGE 0 :
    RAMLS4      		: origin = 0x00A000, length = 0x000800 */
    // add this
    RAMLS04 : origin = 0x008000, length = 0x002800
+   // you can try adding RAMLS06 and add 2800 to 10800 (origin of RAMLS05+2800) and set length to 2800
+   // then set other sections that are running out of memory to RAMLS06... can probably repeat with other
+   // RAMLS0X
+   RAMLS05 : origin = 0x010800, length = 0x002800
    //
    RESET           	: origin = 0x3FFFC0, length = 0x000002
 
@@ -51,11 +55,12 @@ SECTIONS
 
    .stack           : > RAMM1,     PAGE = 1
    // if run out of memory, just keep adding RAMLS04 instead of whatever it is linked to and change page to 0
-   .ebss            : > RAMLS04,   PAGE = 0
+   .ebss            : > RAMLS05,   PAGE = 0
 //   .ebss            : > RAMLS5,    PAGE = 1
    .econst          : > RAMLS04,    PAGE = 0
 //   .econst          : > RAMLS5,    PAGE = 1
-   .esysmem         : > RAMLS5,    PAGE = 1
+   .esysmem         : > RAMLS04,    PAGE = 0
+//   .esysmem         : > RAMLS5,    PAGE = 1
 
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1
