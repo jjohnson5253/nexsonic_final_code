@@ -268,12 +268,13 @@ void run_freq_sweep_menu(){
                voltValues[periodCnt] = (int)volts;
                currValues[periodCnt] = (int)curr;
 
-               double impedance = curr / volts;
-               double power = curr * volts;
+               // maybe add more or less resolution to these
+               double impedance = volts / curr * 1000;
+               double power = volts * curr / 1000;
 
                // calculate power and impedance value and store
-               powerValues[periodCnt] = currValues[periodCnt] * voltValues[periodCnt];
-               impedanceValues[periodCnt] = voltValues[periodCnt] / currValues[periodCnt];
+               powerValues[periodCnt] = (int)power;
+               impedanceValues[periodCnt] = (int)impedance;
 
                // calculate current frequency and store
                freqValues[periodCnt] = (116480000/period); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
@@ -313,8 +314,8 @@ void run_freq_sweep_menu(){
            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
 
            // write column headers
-           msg = "\r\nFrequency | Raw ADC (V) | Raw ADC (I) | Voltage | Current | Impedance | Power\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 81);
+           msg = "\r\nFrequency | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (mOhms) | Power (mW)\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 82);
 
            // print out values
            int i;
@@ -349,46 +350,74 @@ void run_freq_sweep_menu(){
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
 
                // add column spacing
-               msg = "      | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 9);
+               msg = "  | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
 
                // print RAWCURRADC
                // make msg 6 characters long for curr raw adc val
                rawADCcurr = "      ";
 
-               // convert testAvg to string
+               // convert to string
                my_itoa(currADCValues[i], rawADCcurr);
 
                // print msg
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
 
                // add column spacing
-               msg = "      | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 9);
+               msg = "  | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
 
                // print VOLTAGE
                // make msg 6 characters long for curr raw adc val
                volt = "      ";
 
-               // convert testAvg to string
+               // convert to string
                my_itoa(voltValues[i], volt);
 
                // print msg
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
 
                // add column spacing
-               msg = "  | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
+               msg = "    | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
 
                // print CURRENT
                // make msg 6 characters long for curr raw adc val
                curr = "      ";
 
-               // convert testAvg to string
+               // convert to string
                my_itoa(currValues[i], curr);
 
                // print msg
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)curr, 7);
+
+               // add column spacing
+               msg = "    | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
+
+               // print CURRENT
+               // make msg 6 characters long for curr raw adc val
+               impedance = "      ";
+
+               // convert to string
+               my_itoa(impedanceValues[i], impedance);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedance, 7);
+
+               // add column spacing
+               msg = "    | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
+
+               // print CURRENT
+               // make msg 6 characters long for curr raw adc val
+               power = "      ";
+
+               // convert to string
+               my_itoa(powerValues[i], power);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)power, 7);
 
            }
            break;
@@ -564,10 +593,10 @@ void my_itoa(unsigned int value, char* result){
 
     // only 1 digit
     if(tenThou==0 && thou==0 && huns==0 && tens==0){
-        result[0] = (char)" ";
-        result[1] = (char)" ";
-        result[2] = (char)" ";
-        result[3] = (char)" ";
+        result[0] = 32;
+        result[1] = 32;
+        result[2] = 32;
+        result[3] = 32;
         result[4] = (char)ones + 48;
     } // 2 digits
     else if(tenThou==0 && thou==0 && huns==0){
