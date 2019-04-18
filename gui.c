@@ -14,6 +14,13 @@
 #include "sci.h"
 
 // Variables for GUI
+unsigned char *freq;
+unsigned char *rawADCcurr;
+unsigned char *rawADCvolt;
+unsigned char *curr;
+unsigned char *volt;
+unsigned char *impedance;
+unsigned char *power;
 unsigned char *msg;
 uint16_t receivedChar;
 int dutyCycle = 1040;
@@ -25,7 +32,18 @@ uint16_t adcBResult2;
 uint16_t adcCResult0;
 uint16_t adcCResult6;
 
-float testAvg;
+int currADC_avg; // ADC B2
+int voltADC_avg; // ADC C0
+
+int currADCValues[100];
+int voltADCValues[100];
+int voltValues[100];
+int currValues[100];
+int powerValues[100];
+int impedanceValues[100];
+int freqValues[100];
+
+int periodCnt;
 
 void run_gui(){
 
@@ -193,6 +211,12 @@ void run_freq_sweep_menu(){
 
     switch(receivedChar) {
        case 49  :
+
+           // turn on led1 to indicate sweeping
+           GPIO_writePin(5, 1);
+
+           periodCnt = 0;
+
            // set frequency at 55kHz
            period = 2119;
            EPWM_setTimeBasePeriod(EPWM8_BASE, period);
@@ -226,8 +250,33 @@ void run_freq_sweep_menu(){
            // sweep
            while(period > 2045){
 
-               // read ADC
-               testAvg = avg_ADC();
+               // read ADC current and store in array
+               currADC_avg = avg_ADC_curr();
+               currADCValues[periodCnt] = currADC_avg;
+
+               // read ADC voltage and store in array
+               voltADC_avg = avg_ADC_volt();
+               voltADCValues[periodCnt] = voltADC_avg;
+
+               // TODO: change all this double casting by using uint32_t values instead of doubles for the ADC_avg values
+               // calculate actual voltage and current value and store (3300mV / 4095 ADC val)
+               double doubleVoltADC_avg = (double)voltADC_avg;
+               double volts = (doubleVoltADC_avg * 3300)/4096;
+               double doubleCurrADC_avg = (double)currADC_avg;
+               double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+
+               voltValues[periodCnt] = (int)volts;
+               currValues[periodCnt] = (int)curr;
+
+               double impedance = curr / volts;
+               double power = curr * volts;
+
+               // calculate power and impedance value and store
+               powerValues[periodCnt] = currValues[periodCnt] * voltValues[periodCnt];
+               impedanceValues[periodCnt] = voltValues[periodCnt] / currValues[periodCnt];
+
+               // calculate current frequency and store
+               freqValues[periodCnt] = (116480000/period); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
 
                // increase frequency
                period = period - 1;
@@ -242,6 +291,9 @@ void run_freq_sweep_menu(){
 
                // wait 0.06 seconds (I think)
                DEVICE_DELAY_US(100000);
+
+               // increment period counter (times the period has incremented and how many frequencies have been covered)
+               periodCnt++;
            }
 
            // Beep buzzer twice indicating end
@@ -253,6 +305,92 @@ void run_freq_sweep_menu(){
            DEVICE_DELAY_US(250000);
            EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
+           // turn off led1 to indicate end of sweep
+           GPIO_writePin(5, 0);
+
+           // print 2 new lines
+           msg = "\r\n\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
+
+           // write column headers
+           msg = "\r\nFrequency | Raw ADC (V) | Raw ADC (I) | Voltage | Current | Impedance | Power\n\0";
+           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 81);
+
+           // print out values
+           int i;
+           for(i = 0; i<periodCnt; i++){
+
+               // print a new line
+               msg = "\r\n\0";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+               // print FREQ
+               // make msg 6 characters long for freq value
+               freq = "      ";
+
+               // convert testAvg to string
+               my_itoa(freqValues[i], freq);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+
+               // add column spacing
+               msg = "    | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
+
+               // print RAWVOLTADC
+               // make msg 6 characters long for curr raw adc val
+               rawADCvolt = "      ";
+
+               // convert testAvg to string
+               my_itoa(voltADCValues[i], rawADCvolt);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+
+               // add column spacing
+               msg = "      | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 9);
+
+               // print RAWCURRADC
+               // make msg 6 characters long for curr raw adc val
+               rawADCcurr = "      ";
+
+               // convert testAvg to string
+               my_itoa(currADCValues[i], rawADCcurr);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
+
+               // add column spacing
+               msg = "      | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 9);
+
+               // print VOLTAGE
+               // make msg 6 characters long for curr raw adc val
+               volt = "      ";
+
+               // convert testAvg to string
+               my_itoa(voltValues[i], volt);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
+
+               // add column spacing
+               msg = "  | ";
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
+
+               // print CURRENT
+               // make msg 6 characters long for curr raw adc val
+               curr = "      ";
+
+               // convert testAvg to string
+               my_itoa(currValues[i], curr);
+
+               // print msg
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)curr, 7);
+
+           }
            break;
        case 50  :
            guiState = 0;
@@ -263,17 +401,31 @@ void run_freq_sweep_menu(){
     }
 }
 
-double avg_ADC(){
+int avg_ADC_curr(){
 
     double avgB2 = 0;
 
     int i;
-    for(i=0;i<10;i++){
+    for(i=0;i<1000;i++){
         read_ADC();
         avgB2 = avgB2 + adcBResult2;
     }
-    avgB2 = avgB2 / 10;
-    return avgB2;
+    avgB2 = avgB2 / 1000;
+    return (int)avgB2;
+}
+
+int avg_ADC_volt(){
+
+    double avgC0 = 0;
+
+    int i;
+    for(i=0;i<1000;i++){
+        read_ADC();
+        avgC0 = avgC0 + adcCResult0;
+    }
+
+    avgC0 = avgC0 / 1000;
+    return (int)avgC0;
 }
 
 void read_ADC(){
@@ -354,63 +506,99 @@ void drawSonic(uint16_t smile){
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 }
 
-void sweepingAnimation(uint16_t printCount){
+// Implementation of itoa()
+void my_itoa(unsigned int value, char* result){
 
-    // draw sonic
-    msg = "\r\n     ___------__        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n |\\__-- /\\       _-   \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n |/    __      -        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n //\\  /  \\    /__     \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n |  o|  0|__     --_    \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    // change sonic's mouth
-    if(printCount == 0){
-        msg = "\r\n \\\\____-- __ \\   ___-\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-        msg = "\r\n (@@    []   / /_       \0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    uint16_t temp = 0;
+    uint16_t tenThou = 0;
+    uint16_t thou = 0;
+    uint16_t huns = 0;
+    uint16_t tens = 0;
+    uint16_t ones = 0;
+
+    if(value > 9999){
+        temp = (uint16_t)value/10000;
+        tenThou = (uint16_t)temp;
+        value = value - tenThou*10000;
+        temp = (uint16_t)value/1000;
+        thou = (uint16_t)temp;
+        value = value - thou*1000;
+        temp = (uint16_t)value/100;
+        huns = (uint16_t)temp;
+        value = value - huns*100;
+        temp = (uint16_t)value/10;
+        tens = (uint16_t)temp;
+        value = value - tens*10;
+        ones = (uint16_t)value;
+    }
+    else if(value > 999){
+        temp = (uint16_t)value/1000;
+        thou = (uint16_t)temp;
+        value = value - thou*1000;
+        temp = (uint16_t)value/100;
+        huns = (uint16_t)temp;
+        value = value - huns*100;
+        temp = (uint16_t)value/10;
+        tens = (uint16_t)temp;
+        value = value - tens*10;
+        ones = (uint16_t)value;
+    }
+    else if(value > 99){
+        temp = (uint16_t)value/100;
+        huns = (uint16_t)temp;
+        value = value - huns*100;
+        temp = (uint16_t)value/10;
+        tens = (uint16_t)temp;
+        value = value - tens*10;
+        ones = (uint16_t)value;
+    }
+    else if (value > 9){
+        temp = (uint16_t)value/10;
+        tens = (uint16_t)temp;
+        value = value - tens*10;
+        ones = (uint16_t)value;
     }
     else{
-        msg = "\r\n \\\\____-- __ \\   ___-\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-        msg = "\r\n (@@    __/  / /_       \0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        ones = (uint16_t)value;
     }
-    msg = "\r\n  -_____---   --_       \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n   //  \\ \\\\   ___-   \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n //|\\__/  \\\\  \\     \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n \\_-\\_____/  \\-\\      \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n \\_-\\_____/  \\-\\      \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n  // \\\\--\\|           \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n ____//  ||_          \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n /_____\\ /___\\        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
 
-    // update ellipsis (...) frame
-    switch(printCount){
-    case 0:
-        msg = "\r\n Sweeping. \n\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 14);
-        break;
-    case 1:
-        msg = "\r\n Sweeping.. \n\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 15);
-        break;
-    case 2:
-        msg = "\r\n Sweeping... \n\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 16);
-        break;
+    // only 1 digit
+    if(tenThou==0 && thou==0 && huns==0 && tens==0){
+        result[0] = (char)" ";
+        result[1] = (char)" ";
+        result[2] = (char)" ";
+        result[3] = (char)" ";
+        result[4] = (char)ones + 48;
+    } // 2 digits
+    else if(tenThou==0 && thou==0 && huns==0){
+        result[0] = 32;
+        result[1] = 32;
+        result[2] = 32;
+        result[3] = (char)tens + 48;
+        result[4] = (char)ones + 48;
+    } // 3 digits
+    else if(tenThou==0 && thou==0){
+        result[0] = 32;
+        result[1] = 32;
+        result[2] = (char)huns + 48;
+        result[3] = (char)tens + 48;
+        result[4] = (char)ones + 48;
+    } // 4 digits
+    else if(tenThou==0){
+        result[0] = 32;
+        result[1] = (char)thou + 48;
+        result[2] = (char)huns + 48;
+        result[3] = (char)tens + 48;
+        result[4] = (char)ones + 48;
+    } // 5 digits
+    else{
+        result[0] = (char)tenThou + 48;
+        result[1] = (char)thou + 48;
+        result[2] = (char)huns + 48;
+        result[3] = (char)tens + 48;
+        result[4] = (char)ones + 48;
     }
+
 }
+
+

@@ -39,8 +39,6 @@
 void initEPWM8(void);
 void initEPWM3(void);
 
-void itoa(long unsigned int value, char* result, int base);
-
 //
 // Main
 //
@@ -101,6 +99,12 @@ void main(void)
     GPIO_setPadConfig(3, GPIO_PIN_TYPE_STD);
     GPIO_setDirectionMode(3, GPIO_DIR_MODE_OUT);
     GPIO_writePin(3, 1);
+
+    // turn gpio 5 low (should configure led1)
+    GPIO_setPinConfig(GPIO_5_GPIO5);
+    GPIO_setPadConfig(5, GPIO_PIN_TYPE_STD);
+    GPIO_setDirectionMode(5, GPIO_DIR_MODE_OUT);
+    GPIO_writePin(5, 0);
 
     // Initialize SCIB and its FIFO.
     SCI_performSoftwareReset(SCIB_BASE);
