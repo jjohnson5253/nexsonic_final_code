@@ -33,12 +33,16 @@
 #define EPWM_CMP_UP           1U
 #define EPWM_CMP_DOWN         0U
 
+#define HALT_OSCON    1           // OSC ON
+
 //
 // Function Prototypes
 //
 void initEPWM8(void);
 void initEPWM3(void);
 void configureDAC(void);
+__interrupt void wakeISR(void);
+
 
 //
 // Main
@@ -49,10 +53,6 @@ void main(void)
     // initializations
     Device_init();
     Device_initGPIO();
-
-    // initialize interrupts
-    Interrupt_initModule();
-    Interrupt_initVectorTable();
 
     // Configure GPIO14/15 as EPWM8A/8B pins respectively
     GPIO_setPadConfig(14, GPIO_PIN_TYPE_STD);
@@ -107,6 +107,27 @@ void main(void)
     GPIO_setDirectionMode(5, GPIO_DIR_MODE_OUT);
     GPIO_writePin(5, 0);
 
+    // GPIO40 is the external wake-up source.
+    GPIO_setMasterCore(40, GPIO_CORE_CPU1);
+    GPIO_setPinConfig(GPIO_40_GPIO40);
+    GPIO_setDirectionMode(40, GPIO_DIR_MODE_IN);
+    GPIO_setPadConfig(40, GPIO_PIN_TYPE_STD | GPIO_PIN_TYPE_PULLUP);
+    GPIO_setQualificationMode(40, GPIO_QUAL_ASYNC);
+
+    // set gpio 33 as wake up pin
+    SysCtl_enableLPMWakeupPin(40);
+
+    //
+    // Disable global interrupts.
+    //
+    DINT;
+
+    // initialize interrupts
+    Interrupt_initModule();
+    Interrupt_initVectorTable();
+    IER = 0x0000;
+    IFR = 0x0000;
+
     // Initialize SCIB and its FIFO.
     SCI_performSoftwareReset(SCIB_BASE);
 
@@ -151,9 +172,44 @@ void main(void)
     DAC_setShadowValue(DACA_BASE, 2048);
     DEVICE_DELAY_US(2);
 
+    // Map the ISR to the wake interrupt.
+    Interrupt_register(INT_WAKE, wakeISR);
+
+    // Enable the wake interrupt in the PIE: Group 1 interrupt 8.
+    Interrupt_enable(INT_WAKE);
+    Interrupt_clearACKGroup(INTERRUPT_ACK_GROUP1);
+
     // Enable Global Interrupt (INTM) and realtime interrupt (DBGM)
     EINT;
     ERTM;
+
+    //
+    // Check if HALT_OSCON is defined.
+    //
+    if(HALT_OSCON)
+    {
+        //
+        // Enable watchdog in halt.
+        //
+        SysCtl_setWatchdogMode(SYSCTL_WD_MODE_RESET);
+        SysCtl_enableWatchdogInHalt();
+
+        //
+        // Enable the watchdog to wake the device from halt.
+        // Uncomment this section if a watchdog wakeup is desired.
+        //
+//        SysCtl_serviceWatchdog();
+//        SysCtl_enableWatchdog();
+    }
+    else
+    {
+        //
+        // Disable watchdog in halt.
+        //
+        SysCtl_disableWatchdogInHalt();
+    }
+
+    Flash_powerDown(FLASH0CTRL_BASE);
 
     // main loop
     for(;;)
@@ -369,4 +425,18 @@ configureDAC(void)
     // Delay for buffered DAC to power up
     //
     DEVICE_DELAY_US(10);
+}
+
+//
+// wakeISR() - this will be triggered from a watchdog timeout and set
+//             GPIO1 low.
+//
+__interrupt void
+wakeISR(void)
+{
+    //
+    // Write GPIO31 (LED1) low.
+    //
+    GPIO_writePin(DEVICE_GPIO_PIN_LED1, 0);
+    Interrupt_clearACKGroup(INTERRUPT_ACK_GROUP1);
 }

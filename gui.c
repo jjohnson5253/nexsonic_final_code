@@ -103,12 +103,12 @@ void run_main_menu(){
            // duty cycle menu
            guiState = 1;
 
-           // Attempt to turn on and off system:
-           // Doesn't work... if watchdog not enabled, button will turn on pwm to 5kHz (way lower than expected) and sci won't work. If watchdog
-           // is enabled, then pwm just goes to 5kHz and sci stops working and button doesn't do anything
-//           SysCtl_enableLPMWakeupPin(33);
-//           SysCtl_enableWatchdogInHalt();
-//           SysCtl_enterHaltMode();
+           // Enter halt mode
+           // drive gpio 40 low then high to power back on
+           SysCtl_enterHaltMode();
+           // reset clock
+           SysCtl_setClock(DEVICE_SETCLOCK_CFG);
+
            break;
        case 50  :
            // freq menu
@@ -330,11 +330,11 @@ void run_freq_sweep_menu(){
                currValues[periodCnt] = (int)curr;
 
                // maybe add more or less resolution to these
-               double impedance = volts / curr * 1000;
-               double power = volts * curr / 1000;
+               double impedance = volts / curr;
+               double power = volts * curr;
 
                // calculate power and impedance value and store
-               powerValues[periodCnt] = (int)power;
+               powerValues[periodCnt] = (int)power / 1000;
                impedanceValues[periodCnt] = (int)impedance;
 
                // calculate current frequency and store
@@ -390,7 +390,7 @@ void run_freq_sweep_menu(){
            drawSonic(1);
 
            // write column headers
-           msg = "\r\n\nFrequency | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (mOhms) | Power (mW)\n\0";
+           msg = "\r\n\nFreq (Hz) | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (Ohms)  | Power (mW)\n\0";
            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 84);
 
            // print out values
