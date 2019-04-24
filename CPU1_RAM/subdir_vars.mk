@@ -13,26 +13,26 @@ LIB_SRCS += \
 
 C_SRCS += \
 ../gui.c \
-../main_code_final_board.c 
+../main_code_final_board_python_gui.c 
 
 C_DEPS += \
 ./gui.d \
-./main_code_final_board.d 
+./main_code_final_board_python_gui.d 
 
 OBJS += \
 ./gui.obj \
-./main_code_final_board.obj 
+./main_code_final_board_python_gui.obj 
 
 OBJS__QUOTED += \
 "gui.obj" \
-"main_code_final_board.obj" 
+"main_code_final_board_python_gui.obj" 
 
 C_DEPS__QUOTED += \
 "gui.d" \
-"main_code_final_board.d" 
+"main_code_final_board_python_gui.d" 
 
 C_SRCS__QUOTED += \
 "../gui.c" \
-"../main_code_final_board.c" 
+"../main_code_final_board_python_gui.c" 
 
 

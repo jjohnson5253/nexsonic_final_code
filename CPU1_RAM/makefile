@@ -11,7 +11,7 @@ GEN_CMDS__FLAG :=
 
 ORDERED_OBJS += \
 "./gui.obj" \
-"./main_code_final_board.obj" \
+"./main_code_final_board_python_gui.obj" \
 "./device/device.obj" \
 "./device/f28004x_codestartbranch.obj" \
 "../280049C_RAM_lnk.cmd" \
@@ -126,42 +126,42 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-main_code_final_board.out \
+main_code_final_board_python_gui.out \
 
 EXE_OUTPUTS__QUOTED += \
-"main_code_final_board.out" \
+"main_code_final_board_python_gui.out" \
 
 BIN_OUTPUTS += \
-main_code_final_board.hex \
+main_code_final_board_python_gui.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"main_code_final_board.hex" \
+"main_code_final_board_python_gui.hex" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "main_code_final_board.out"
+	@$(MAKE) --no-print-directory -Onone "main_code_final_board_python_gui.out"
 
 # Tool invocations
-main_code_final_board.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
+main_code_final_board_python_gui.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: C2000 Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=DEBUG --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"main_code_final_board.map" --stack_size=0x100 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="main_code_final_board_linkInfo.xml" --entry_point=code_start --rom_model -o "main_code_final_board.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=DEBUG --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"main_code_final_board_python_gui.map" --stack_size=0x100 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="main_code_final_board_python_gui_linkInfo.xml" --entry_point=code_start --rom_model -o "main_code_final_board_python_gui.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
-main_code_final_board.hex: $(EXE_OUTPUTS)
+main_code_final_board_python_gui.hex: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: C2000 Hex Utility'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "main_code_final_board.hex" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "main_code_final_board_python_gui.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "gui.obj" "main_code_final_board.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
-	-$(RM) "gui.d" "main_code_final_board.d" "device\device.d" 
+	-$(RM) "gui.obj" "main_code_final_board_python_gui.obj" "device\device.obj" "device\f28004x_codestartbranch.obj" 
+	-$(RM) "gui.d" "main_code_final_board_python_gui.d" "device\device.d" 
 	-$(RM) "device\f28004x_codestartbranch.d" 
 	-@echo 'Finished clean'
 	-@echo ' '

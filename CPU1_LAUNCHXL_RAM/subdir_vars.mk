@@ -12,21 +12,27 @@ LIB_SRCS += \
 ../driverlib.lib 
 
 C_SRCS += \
-../pwm5a5b_on_PCBRev1.c 
+../gui.c \
+../main_code_final_board.c 
 
 C_DEPS += \
-./pwm5a5b_on_PCBRev1.d 
+./gui.d \
+./main_code_final_board.d 
 
 OBJS += \
-./pwm5a5b_on_PCBRev1.obj 
+./gui.obj \
+./main_code_final_board.obj 
 
 OBJS__QUOTED += \
-"pwm5a5b_on_PCBRev1.obj" 
+"gui.obj" \
+"main_code_final_board.obj" 
 
 C_DEPS__QUOTED += \
-"pwm5a5b_on_PCBRev1.d" 
+"gui.d" \
+"main_code_final_board.d" 
 
 C_SRCS__QUOTED += \
-"../pwm5a5b_on_PCBRev1.c" 
+"../gui.c" \
+"../main_code_final_board.c" 
 
 

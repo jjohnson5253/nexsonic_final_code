@@ -1,1 +1,1 @@
-"./pwm5a5b_on_PCBRev1.obj" "./device/device.obj" "./device/f28004x_codestartbranch.obj" "../280049C_RAM_lnk.cmd" "../driverlib.lib" -llibc.a 
+"./gui.obj" "./main_code_final_board.obj" "./device/device.obj" "./device/f28004x_codestartbranch.obj" "../280049C_RAM_lnk.cmd" "../driverlib.lib" -llibc.a 

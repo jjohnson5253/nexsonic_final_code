@@ -15,12 +15,14 @@
 
 // Variables for GUI
 unsigned char *freq;
+unsigned char *dutyString;
 unsigned char *rawADCcurr;
 unsigned char *rawADCvolt;
-unsigned char *curr;
+unsigned char *currString;
 unsigned char *volt;
-unsigned char *impedance;
-unsigned char *power;
+unsigned char *dac;
+unsigned char *impedanceString;
+unsigned char *powerString;
 unsigned char *msg;
 uint16_t receivedChar;
 int dutyCycle = 1040;
@@ -49,96 +51,40 @@ int periodCnt;
 
 void run_gui(){
 
-    // print a bunch of new lines to clear out window
-    msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-
-    switch(guiState){
-    case 0:
-        run_main_menu();
-        break;
-
-    case 1:
-        run_duty_cycle_menu();
-        break;
-
-    case 2:
-        run_frequency_menu();
-        break;
-
-    case 3:
-        run_dac_menu();
-        break;
-
-    case 4:
-        run_freq_sweep_menu();
-        break;
-
-    default:
-        guiState = 0;
-        break;
-    }
-}
-
-void run_main_menu(){
-
-    msg = "\r\n\nChoose an option: \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 23);
-    msg = "\r\n 1. Change duty cycle \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    msg = "\r\n 2. Change frequency \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 24);
-    msg = "\r\n 3. Change DAC \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
-    msg = "\r\n 4. Perform sweep \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 21);
-    msg = "\r\n\nEnter number: \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
-
     // Read a character from the FIFO.
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
 
-    switch(receivedChar) {
-       case 49  :
-           // duty cycle menu
-           guiState = 1;
+    switch(receivedChar){
+        case 49: // 1
+            run_duty_cycle_menu();
+            break;
 
-           // Enter halt mode
-           // drive gpio 40 low then high to power back on
-           SysCtl_enterHaltMode();
-           // reset clock
-           SysCtl_setClock(DEVICE_SETCLOCK_CFG);
+        case 50: // 2
+            run_frequency_menu();
+            readAndSendADC();
+            break;
 
-           break;
-       case 50  :
-           // freq menu
-           guiState = 2;
-           break;
-       case 51  :
-           // DAC menu
-           guiState = 3;
-           break;
-       case 52  :
-           // freq sweep menu
-           guiState = 4;
-           break;
-       default :
-           msg = "\r\nPlease choose one of the options\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
-           break;
+        case 51: // 3
+            run_dac_menu();
+            readAndSendADC();
+            break;
+
+        case 52: // 4
+            run_freq_sweep_menu();
+            break;
+
+        case 53: // 5
+            readAndSendADC();
+            break;
+
+        case 54: // 6
+            sendSettingsVals();
+            readAndSendADC();
+            break;
     }
 }
 
 void run_duty_cycle_menu(){
-
-    msg = "\r\n 1. Increase duty cycle \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-    msg = "\r\n 2. Decrease duty cycle \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-    msg = "\r\n 3. Go back \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-    msg = "\r\n\nEnter number: \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
 
     // Read a character from the FIFO.
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
@@ -166,22 +112,22 @@ void run_duty_cycle_menu(){
            // return to home
            guiState = 0;
            break;
-       default :
-           msg = "\r\nPlease choose one of the options\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
     }
+
+    double dutyCyclePercent = (double)dutyCycle/(double)period * 100;
+
+    // print freq value for python GUI to read
+    my_itoa((int)dutyCyclePercent, dutyString);
+
+    // print msg
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dutyString, 7);
+
+    // print a new line (need for python GUI to know when to stop reading)
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
 
 void run_frequency_menu(){
-
-    msg = "\r\n 1. Decrease frequency \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 26);
-    msg = "\r\n 2. Increase frequency \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 26);
-    msg = "\r\n 3. Go back \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-    msg = "\r\n\nEnter number: \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
 
     // Read a character from the FIFO.
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
@@ -196,6 +142,7 @@ void run_frequency_menu(){
            EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
            // update period
            EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+
            break;
        case 50  :
            // increase frequency decrease period
@@ -206,54 +153,61 @@ void run_frequency_menu(){
            EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
            // update period
            EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+
            break;
        case 51  :
            guiState = 0;
            break;
-       default :
-           msg = "\r\nPlease choose one of the options\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
     }
+
+    // print freq value for python GUI to read
+    my_itoa((116480000/period), freq); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
+
+    // print msg
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+
+    // print a new line (need for python GUI to know when to stop reading)
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
 
 void run_dac_menu(){
-
-    msg = "\r\n 1. Increase DAC \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
-    msg = "\r\n 2. Decrease DAC \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 20);
-    msg = "\r\n 3. Go back \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-    msg = "\r\n\nEnter number: \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
-
     // Read a character from the FIFO.
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
 
     switch(receivedChar) {
        case 49  :
-           // Increase DAC
-           dacVal = dacVal + 50;
-
-           // set DAC
-           DAC_setShadowValue(DACA_BASE, dacVal);
-           DEVICE_DELAY_US(2);
-           break;
-       case 50  :
-           // Decrease DAC
+           // decrease DAC
            dacVal = dacVal - 50;
 
            // set DAC
            DAC_setShadowValue(DACA_BASE, dacVal);
            DEVICE_DELAY_US(2);
            break;
+       case 50  :
+           // increase DAC
+           dacVal = dacVal + 50;
+
+           // set DAC
+           DAC_setShadowValue(DACA_BASE, dacVal);
+           DEVICE_DELAY_US(2);
+           break;
        case 51  :
            guiState = 0;
            break;
-       default :
-           msg = "\r\nPlease choose one of the options\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
     }
+
+    // note: all values in equation must be doubles not ints to prevent overflow
+    double dacInVolts = ((double)dacVal * 3300)/4096;
+
+    // print dac value for python GUI to read
+    my_itoa((int)dacInVolts, dac);
+    // print msg
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
+
+    // print a new line (need for python GUI to know when to stop reading)
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
 
 
@@ -287,26 +241,6 @@ void run_freq_sweep_menu(){
            DEVICE_DELAY_US(250000);
            EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
-           // print a bunch of new lines to clear out window
-           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-
-           // speech bubble for sonic
-           msg = "\r\n           ------------- \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n          < Sweeping... > \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 28);
-           msg = "\r\n           ------------- \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n              /          \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n             /           \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-
-           // draw sonic with mouth open and tell user "sweeping"
-           drawSonic(0);
 
            // sweep
            while(period > 2045){
@@ -459,41 +393,41 @@ void run_freq_sweep_menu(){
 
                // print CURRENT
                // make msg 6 characters long for curr raw adc val
-               curr = "      ";
+               currString = "      ";
 
                // convert to string
-               my_itoa(currValues[i], curr);
+               my_itoa(currValues[i], currString);
 
                // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)curr, 7);
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
 
                // add column spacing
                msg = "    | ";
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
 
-               // print CURRENT
+               // print impedance
                // make msg 6 characters long for curr raw adc val
-               impedance = "      ";
+               impedanceString = "      ";
 
                // convert to string
-               my_itoa(impedanceValues[i], impedance);
+               my_itoa(impedanceValues[i], impedanceString);
 
                // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedance, 7);
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
 
                // add column spacing
                msg = "    | ";
                SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
 
-               // print CURRENT
+               // print power
                // make msg 6 characters long for curr raw adc val
-               power = "      ";
+               powerString = "      ";
 
                // convert to string
-               my_itoa(powerValues[i], power);
+               my_itoa(powerValues[i], powerString);
 
                // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)power, 7);
+               SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
 
            }
            break;
@@ -504,6 +438,90 @@ void run_freq_sweep_menu(){
            msg = "\r\nPlease choose one of the options\n\0";
            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
     }
+}
+
+void readAndSendADC(){
+
+    // read ADC current and store in array
+    currADC_avg = avg_ADC_curr();
+
+    // read ADC voltage and store in array
+    voltADC_avg = avg_ADC_volt();
+
+    // calculate voltage and current from adc values
+    double doubleVoltADC_avg = (double)voltADC_avg;
+    double volts = (doubleVoltADC_avg * 3300)/4096;
+    double doubleCurrADC_avg = (double)currADC_avg;
+    double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+
+    // calculate impedance and power from voltage and current
+    double impedance = volts / curr;
+    double power = volts * curr;
+    int intPower = (int)power / 1000;
+    int intImpedance = (int)impedance;
+
+    // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
+    rawADCvolt = "      ";
+    my_itoa(voltADC_avg, rawADCvolt);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    rawADCcurr = "      ";
+    my_itoa(currADC_avg, rawADCcurr);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    volt = "      ";
+    my_itoa((int)volts, volt);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    currString = "      ";
+    my_itoa((int)(curr), currString);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    impedanceString = "      ";
+    my_itoa(intImpedance, impedanceString);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    powerString = "      ";
+    my_itoa(intPower, powerString);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+}
+
+void sendSettingsVals(){
+
+    // find dac and duty cycle
+    double dutyCyclePercent = (double)dutyCycle/(double)period * 100;
+    double dacInVolts = ((double)dacVal * 3300)/4096;
+
+    // print freq
+    my_itoa((116480000/period), freq);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    // print duty cycle
+    my_itoa((int)dutyCyclePercent, dutyString);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dutyString, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+    // print DAC
+    my_itoa((int)dacInVolts, dac);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
 }
 
 int avg_ADC_curr(){

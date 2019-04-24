@@ -2,7 +2,7 @@
 
 gui.obj: ../gui.c
 gui.obj: ../gui.h
-gui.obj: C:/Users/jake/workspace_v8/main_code_final_board/device/driverlib.h
+gui.obj: C:/Users/jake/workspace_v8/main_code_final_board_python_gui/device/driverlib.h
 gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_memmap.h
 gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/adc.h
 gui.obj: C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/stdbool.h
@@ -78,11 +78,11 @@ gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_sdf
 gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/spi.h
 gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_spi.h
 gui.obj: C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/version.h
-gui.obj: C:/Users/jake/workspace_v8/main_code_final_board/device/device.h
+gui.obj: C:/Users/jake/workspace_v8/main_code_final_board_python_gui/device/device.h
 
 ../gui.c: 
 ../gui.h: 
-C:/Users/jake/workspace_v8/main_code_final_board/device/driverlib.h: 
+C:/Users/jake/workspace_v8/main_code_final_board_python_gui/device/driverlib.h: 
 C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_memmap.h: 
 C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/adc.h: 
 C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include/stdbool.h: 
@@ -158,4 +158,4 @@ C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_sdfm.h:
 C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/spi.h: 
 C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/inc/hw_spi.h: 
 C:/ti/c2000/C2000Ware_1_00_06_00/driverlib/f28004x/driverlib/version.h: 
-C:/Users/jake/workspace_v8/main_code_final_board/device/device.h: 
+C:/Users/jake/workspace_v8/main_code_final_board_python_gui/device/device.h: 

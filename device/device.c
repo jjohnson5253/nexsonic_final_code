@@ -85,16 +85,6 @@ void Device_init(void)
     SysCtl_setLowSpeedClock(SYSCTL_LSPCLK_PRESCALE_4);
 
     //
-    // These asserts will check that the #defines for the clock rates in
-    // device.h match the actual rates that have been configured. If they do
-    // not match, check that the calculations of DEVICE_SYSCLK_FREQ and
-    // DEVICE_LSPCLK_FREQ are accurate. Some examples will not perform as
-    // expected if these are not correct.
-    //
-    ASSERT(SysCtl_getClock(DEVICE_OSCSRC_FREQ) == DEVICE_SYSCLK_FREQ);
-    ASSERT(SysCtl_getLowSpeedClock(DEVICE_OSCSRC_FREQ) == DEVICE_LSPCLK_FREQ);
-
-    //
     // Call Flash Initialization to setup flash waitstates. This function must
     // reside in RAM.
     //
