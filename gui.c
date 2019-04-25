@@ -446,20 +446,20 @@ void powerTrackAndSend(){
     GPIO_writePin(6, 1);
 
     // Beep buzzer three times (1st one long) indicating start of power tracking
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(500000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(400000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
     int i = 0;
-    for(i=0;i<10000;i++){
+    for(i=0;i<200;i++){
 
         prevPower3 = powerAtPeriod(prev3Period);
         prevPower2 = powerAtPeriod(prev2Period);
@@ -478,27 +478,27 @@ void powerTrackAndSend(){
             if(prevPowTotal > nextPowTotal){
                 // set currPeriod to prevPeriod since it has more power than next and curr, and adjust other period vars
                 currPeriod = prev1Period;
-                prev3Period = period - 3;
-                prev2Period = period - 2;
-                prev1Period = period - 1;
-                next1Period = period + 1;
-                next2Period = period + 2;
-                next3Period = period + 3;
+                prev3Period = currPeriod - 3;
+                prev2Period = currPeriod - 2;
+                prev1Period = currPeriod - 1;
+                next1Period = currPeriod + 1;
+                next2Period = currPeriod + 2;
+                next3Period = currPeriod + 3;
             }
             else{
                 // set currPeriod to nextPeriod since it has more power than prev and curr, and adjust other period vars
                 currPeriod = next1Period;
-                prev3Period = period - 3;
-                prev2Period = period - 2;
-                prev1Period = period - 1;
-                next1Period = period + 1;
-                next2Period = period + 2;
-                next3Period = period + 3;
+                prev3Period = currPeriod - 3;
+                prev2Period = currPeriod - 2;
+                prev1Period = currPeriod - 1;
+                next1Period = currPeriod + 1;
+                next2Period = currPeriod + 2;
+                next3Period = currPeriod + 3;
             }
         }
 
         // set period to current period and update
-        period = currPeriod;
+        period = currPeriod - 1;
         updatePeriod();
 
         // send settings and adc data to gui for current period
@@ -516,13 +516,13 @@ void powerTrackAndSend(){
     GPIO_writePin(6, 0);
 
     // Beep buzzer twice indicating end of power tracking
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-//    DEVICE_DELAY_US(250000);
-//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+    DEVICE_DELAY_US(250000);
+    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
 }
 
