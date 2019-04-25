@@ -23,6 +23,7 @@ unsigned char *volt;
 unsigned char *dac;
 unsigned char *impedanceString;
 unsigned char *powerString;
+unsigned char *endMsg;
 unsigned char *msg;
 uint16_t receivedChar;
 int dutyCycle = 1040;
@@ -34,7 +35,7 @@ uint16_t adcBResult2;
 uint16_t adcCResult0;
 uint16_t adcCResult6;
 
-uint16_t dacVal = 2048;
+uint16_t dacVal = 600;
 
 int currADC_avg; // ADC B2
 int voltADC_avg; // ADC C0
@@ -71,6 +72,13 @@ void run_gui(){
 
         case 52: // 4
             run_freq_sweep_menu();
+
+//            // send stop sweep message so python knows to stop reading
+//            endMsg = "ENDSWP";
+//            SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+//            msg = "\n";
+//            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
             break;
 
         case 53: // 5
@@ -80,6 +88,10 @@ void run_gui(){
         case 54: // 6
             sendSettingsVals();
             readAndSendADC();
+            break;
+
+        case 55: // 7
+            powerTrackAndSend();
             break;
     }
 }
@@ -213,231 +225,119 @@ void run_dac_menu(){
 
 void run_freq_sweep_menu(){
 
-    // 55khz = 2119 counts, 57kHz = 2045 counts
-    msg = "\r\n 1. Sweep from 55kHz to 57kHz \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 33);
-    msg = "\r\n 2. Go back \n\0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 13);
-    msg = "\r\n\nEnter number: \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 17);
+   // turn on led1 to indicate sweeping
+   GPIO_writePin(5, 1);
 
-    // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+   periodCnt = 0;
 
-    switch(receivedChar) {
-       case 49  :
+   // set frequency at 55kHz
+   period = 2119;
+   EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
-           // turn on led1 to indicate sweeping
-           GPIO_writePin(5, 1);
+   // Beep buzzer once indicating start
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+   DEVICE_DELAY_US(250000);
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
-           periodCnt = 0;
+   // sweep
+   while(period > 2045){
 
-           // set frequency at 55kHz
-           period = 2119;
-           EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+       // read ADC current
+       currADC_avg = avg_ADC_curr();
 
-           // Beep buzzer once indicating start
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-           DEVICE_DELAY_US(250000);
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+       // read ADC voltage
+       voltADC_avg = avg_ADC_volt();
 
+       // calculate voltage and current from adc values
+       double doubleVoltADC_avg = (double)voltADC_avg;
+       double volts = (doubleVoltADC_avg * 3300)/4096;
+       double doubleCurrADC_avg = (double)currADC_avg;
+       double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
 
-           // sweep
-           while(period > 2045){
+       // calculate impedance and power from voltage and current
+       double impedance = volts / curr;
+       double power = volts * curr / 1000;
+       int intPower = (int)power;
+       int intImpedance = (int)impedance;
 
-               // read ADC current and store in array
-               currADC_avg = avg_ADC_curr();
-               currADCValues[periodCnt] = currADC_avg;
+       int periodPrint = (116480000/period);
 
-               // read ADC voltage and store in array
-               voltADC_avg = avg_ADC_volt();
-               voltADCValues[periodCnt] = voltADC_avg;
+       // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
 
-               // TODO: change all this double casting by using uint32_t values instead of doubles for the ADC_avg values
-               // calculate actual voltage and current value and store (3300mV / 4095 ADC val)
-               double doubleVoltADC_avg = (double)voltADC_avg;
-               double volts = (doubleVoltADC_avg * 3300)/4096;
-               double doubleCurrADC_avg = (double)currADC_avg;
-               double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+       // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
+       // any other character array
+       rawADCvolt = "      ";
+       my_itoa(periodPrint, rawADCvolt);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               voltValues[periodCnt] = (int)volts;
-               currValues[periodCnt] = (int)curr;
+       rawADCvolt = "      ";
+       my_itoa(voltADC_avg, rawADCvolt);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // maybe add more or less resolution to these
-               double impedance = volts / curr;
-               double power = volts * curr;
+       rawADCcurr = "      ";
+       my_itoa(currADC_avg, rawADCcurr);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // calculate power and impedance value and store
-               powerValues[periodCnt] = (int)power / 1000;
-               impedanceValues[periodCnt] = (int)impedance;
+       volt = "      ";
+       my_itoa((int)volts, volt);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // calculate current frequency and store
-               freqValues[periodCnt] = (116480000/period); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
+       currString = "      ";
+       my_itoa((int)(curr), currString);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // increase frequency
-               period = period - 1;
+       impedanceString = "      ";
+       my_itoa(intImpedance, impedanceString);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // update duty cycle to new period
-               dutyCycle = period * dutyCycleTrack;
-               EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-               EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+       powerString = "      ";
+       my_itoa(intPower, powerString);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-               // update period
-               EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+       // increase frequency
+       period = period - 1;
 
-               // wait 0.06 seconds (I think)
-               DEVICE_DELAY_US(100000);
+       // update duty cycle to new period
+       dutyCycle = period * dutyCycleTrack;
+       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
+       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
 
-               // increment period counter (times the period has incremented and how many frequencies have been covered)
-               periodCnt++;
-           }
+       // update period
+       EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
-           // Beep buzzer twice indicating end
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-           DEVICE_DELAY_US(250000);
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-           DEVICE_DELAY_US(250000);
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-           DEVICE_DELAY_US(250000);
-           EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+       // wait 0.06 seconds (I think)
+       DEVICE_DELAY_US(100000);
 
-           // turn off led1 to indicate end of sweep
-           GPIO_writePin(5, 0);
+       // increment period counter (times the period has incremented and how many frequencies have been covered)
+       periodCnt++;
+   }
 
-           // print a bunch of new lines to clear out window
-           msg = "\r\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+   // Beep buzzer twice indicating end
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+   DEVICE_DELAY_US(250000);
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+   DEVICE_DELAY_US(250000);
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+   DEVICE_DELAY_US(250000);
+   EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
-           // speech bubble for sonic
-           msg = "\r\n           ------------- \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n          <    Done!    > \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 28);
-           msg = "\r\n           ------------- \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n              /          \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
-           msg = "\r\n             /           \0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 27);
+   // turn off led1 to indicate end of sweep
+   GPIO_writePin(5, 0);
 
-           // draw sonic smiling and tell user "sweeping"
-           drawSonic(1);
-
-           // write column headers
-           msg = "\r\n\nFreq (Hz) | ADC (V) | ADC (I) | Volt (mV) | Curr (mA) | Z (Ohms)  | Power (mW)\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 84);
-
-           // print out values
-           int i;
-           for(i = 0; i<periodCnt; i++){
-
-               // print a new line
-               msg = "\r\n\0";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-               // print FREQ
-               // make msg 6 characters long for freq value
-               freq = "      ";
-
-               // convert testAvg to string
-               my_itoa(freqValues[i], freq);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
-
-               // add column spacing
-               msg = "    | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
-
-               // print RAWVOLTADC
-               // make msg 6 characters long for curr raw adc val
-               rawADCvolt = "      ";
-
-               // convert testAvg to string
-               my_itoa(voltADCValues[i], rawADCvolt);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
-
-               // add column spacing
-               msg = "  | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
-
-               // print RAWCURRADC
-               // make msg 6 characters long for curr raw adc val
-               rawADCcurr = "      ";
-
-               // convert to string
-               my_itoa(currADCValues[i], rawADCcurr);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
-
-               // add column spacing
-               msg = "  | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 5);
-
-               // print VOLTAGE
-               // make msg 6 characters long for curr raw adc val
-               volt = "      ";
-
-               // convert to string
-               my_itoa(voltValues[i], volt);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
-
-               // add column spacing
-               msg = "    | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
-
-               // print CURRENT
-               // make msg 6 characters long for curr raw adc val
-               currString = "      ";
-
-               // convert to string
-               my_itoa(currValues[i], currString);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
-
-               // add column spacing
-               msg = "    | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
-
-               // print impedance
-               // make msg 6 characters long for curr raw adc val
-               impedanceString = "      ";
-
-               // convert to string
-               my_itoa(impedanceValues[i], impedanceString);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
-
-               // add column spacing
-               msg = "    | ";
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 7);
-
-               // print power
-               // make msg 6 characters long for curr raw adc val
-               powerString = "      ";
-
-               // convert to string
-               my_itoa(powerValues[i], powerString);
-
-               // print msg
-               SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
-
-           }
-           break;
-       case 50  :
-           guiState = 0;
-           break;
-       default :
-           msg = "\r\nPlease choose one of the options\n\0";
-           SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 36);
-    }
 }
 
 void readAndSendADC(){
@@ -456,8 +356,8 @@ void readAndSendADC(){
 
     // calculate impedance and power from voltage and current
     double impedance = volts / curr;
-    double power = volts * curr;
-    int intPower = (int)power / 1000;
+    double power = volts * curr / 1000;
+    int intPower = (int)power;
     int intImpedance = (int)impedance;
 
     // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
@@ -500,19 +400,12 @@ void readAndSendADC(){
 
 void sendSettingsVals(){
 
-    // find dac and duty cycle
-    double dutyCyclePercent = (double)dutyCycle/(double)period * 100;
+    // find dac
     double dacInVolts = ((double)dacVal * 3300)/4096;
 
     // print freq
     my_itoa((116480000/period), freq);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
-    msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-    // print duty cycle
-    my_itoa((int)dutyCyclePercent, dutyString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dutyString, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
@@ -522,6 +415,149 @@ void sendSettingsVals(){
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
+}
+
+void powerTrackAndSend(){
+
+    int prevPower3 = 0;
+    int prevPower2 = 0;
+    int prevPower1 = 0;
+    int currPower = 0;
+    int nextPower1 = 0;
+    int nextPower2 = 0;
+    int nextPower3 = 0;
+
+    int prevPowTotal = 0;
+    int nextPowTotal = 0;
+    int currPowTotal = 0;
+
+    int prev3Period = period - 3;
+    int prev2Period = period - 2;
+    int prev1Period = period - 1;
+    int currPeriod = period;
+    int next1Period = period + 1;
+    int next2Period = period + 2;
+    int next3Period = period + 3;
+
+    // turn on LEDs to indicate start of power tracking
+    GPIO_writePin(2, 1);
+    GPIO_writePin(3, 1);
+    GPIO_writePin(5, 1);
+    GPIO_writePin(6, 1);
+
+    // Beep buzzer three times (1st one long) indicating start of power tracking
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(500000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+
+    int i = 0;
+    for(i=0;i<10000;i++){
+
+        prevPower3 = powerAtPeriod(prev3Period);
+        prevPower2 = powerAtPeriod(prev2Period);
+        prevPower1 = powerAtPeriod(prev1Period);
+        currPower = powerAtPeriod(currPeriod);
+        nextPower1 = powerAtPeriod(next1Period);
+        nextPower2 = powerAtPeriod(next2Period);
+        nextPower3 = powerAtPeriod(next3Period);
+
+        prevPowTotal = prevPower3 + prevPower2 + prevPower1;
+        nextPowTotal = nextPower3 + nextPower2 + nextPower1;
+        currPowTotal = currPower * 3;
+
+        // check if previous power or next power are greater than current power
+        if(prevPowTotal > currPowTotal || nextPowTotal > currPowTotal){
+            if(prevPowTotal > nextPowTotal){
+                // set currPeriod to prevPeriod since it has more power than next and curr, and adjust other period vars
+                currPeriod = prev1Period;
+                prev3Period = period - 3;
+                prev2Period = period - 2;
+                prev1Period = period - 1;
+                next1Period = period + 1;
+                next2Period = period + 2;
+                next3Period = period + 3;
+            }
+            else{
+                // set currPeriod to nextPeriod since it has more power than prev and curr, and adjust other period vars
+                currPeriod = next1Period;
+                prev3Period = period - 3;
+                prev2Period = period - 2;
+                prev1Period = period - 1;
+                next1Period = period + 1;
+                next2Period = period + 2;
+                next3Period = period + 3;
+            }
+        }
+
+        // set period to current period and update
+        period = currPeriod;
+        updatePeriod();
+
+        // send settings and adc data to gui for current period
+        sendSettingsVals();
+        readAndSendADC();
+
+        // wait 0.06 seconds (I think)
+//        DEVICE_DELAY_US(100000);
+    }
+
+    // turn off LEDs to indicate end of power tracking
+    GPIO_writePin(2, 0);
+    GPIO_writePin(3, 0);
+    GPIO_writePin(5, 0);
+    GPIO_writePin(6, 0);
+
+    // Beep buzzer twice indicating end of power tracking
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+
+}
+
+int powerAtPeriod(int testPeriod){
+
+    // update to new period
+    period = testPeriod;
+    updatePeriod();
+
+    // read ADC current and voltage at new period
+    currADC_avg = avg_ADC_curr();
+    voltADC_avg = avg_ADC_volt();
+
+    // calculate voltage and current from adc values
+    double doubleVoltADC_avg = (double)voltADC_avg;
+    double volts = (doubleVoltADC_avg * 3300)/4096;
+    double doubleCurrADC_avg = (double)currADC_avg;
+    double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+
+    // calculate power from voltage and current
+    double power = volts * curr / 1000;
+    int intPower = (int)power;
+
+    return intPower;
+}
+
+void updatePeriod(){
+
+    // update duty cycle to new period
+    dutyCycle = period * dutyCycleTrack;
+    EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
+    EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+
+    // update period
+    EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 }
 
 int avg_ADC_curr(){
@@ -721,7 +757,6 @@ void my_itoa(unsigned int value, char* result){
         result[3] = (char)tens + 48;
         result[4] = (char)ones + 48;
     }
-
 }
 
 

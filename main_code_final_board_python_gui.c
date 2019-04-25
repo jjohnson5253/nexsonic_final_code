@@ -89,19 +89,25 @@ void main(void)
     GPIO_setDirectionMode(22, GPIO_DIR_MODE_OUT);
     GPIO_writePin(22, 1);
 
-    // turn gpio 2 high (should turn on led)
+    // turn gpio 2 low (should turn off led 2)
     GPIO_setPinConfig(GPIO_2_GPIO2);
     GPIO_setPadConfig(2, GPIO_PIN_TYPE_STD);
     GPIO_setDirectionMode(2, GPIO_DIR_MODE_OUT);
-    GPIO_writePin(2, 1);
+    GPIO_writePin(2, 0);
 
-    // turn gpio 3 high (should turn on led)
+    // turn gpio 3 low (should turn off led 4)
     GPIO_setPinConfig(GPIO_3_GPIO3);
     GPIO_setPadConfig(3, GPIO_PIN_TYPE_STD);
     GPIO_setDirectionMode(3, GPIO_DIR_MODE_OUT);
-    GPIO_writePin(3, 1);
+    GPIO_writePin(3, 0);
 
-    // turn gpio 5 low (should configure led1)
+    // turn gpio 6 low (should turn off led 3)
+    GPIO_setPinConfig(GPIO_6_GPIO6);
+    GPIO_setPadConfig(6, GPIO_PIN_TYPE_STD);
+    GPIO_setDirectionMode(6, GPIO_DIR_MODE_OUT);
+    GPIO_writePin(6, 0);
+
+    // turn gpio 5 low (should turn off led 1)
     GPIO_setPinConfig(GPIO_5_GPIO5);
     GPIO_setPadConfig(5, GPIO_PIN_TYPE_STD);
     GPIO_setDirectionMode(5, GPIO_DIR_MODE_OUT);
@@ -169,7 +175,7 @@ void main(void)
     configureDAC();
 
     // set DAC
-    DAC_setShadowValue(DACA_BASE, 2048); // 1.6V
+    DAC_setShadowValue(DACA_BASE, 600); // 1.6V
     DEVICE_DELAY_US(2);
 
     // set DACB
