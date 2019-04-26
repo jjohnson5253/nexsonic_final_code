@@ -252,10 +252,10 @@ void run_freq_sweep_menu(){
        double doubleVoltADC_avg = (double)voltADC_avg;
        double volts = (doubleVoltADC_avg * 3300)/4096;
        double doubleCurrADC_avg = (double)currADC_avg;
-       double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+       double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
 
        // calculate impedance and power from voltage and current
-       double impedance = volts / curr;
+       double impedance = volts / curr * 1000;
        double power = volts * curr / 1000;
        int intPower = (int)power;
        int intImpedance = (int)impedance;
@@ -352,10 +352,10 @@ void readAndSendADC(){
     double doubleVoltADC_avg = (double)voltADC_avg;
     double volts = (doubleVoltADC_avg * 3300)/4096;
     double doubleCurrADC_avg = (double)currADC_avg;
-    double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+    double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
 
     // calculate impedance and power from voltage and current
-    double impedance = volts / curr;
+    double impedance = volts / curr * 1000;
     double power = volts * curr / 1000;
     int intPower = (int)power;
     int intImpedance = (int)impedance;
@@ -540,7 +540,7 @@ int powerAtPeriod(int testPeriod){
     double doubleVoltADC_avg = (double)voltADC_avg;
     double volts = (doubleVoltADC_avg * 3300)/4096;
     double doubleCurrADC_avg = (double)currADC_avg;
-    double curr = (doubleCurrADC_avg * 3300)/4096 / 4;  // 400mV per amp
+    double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
 
     // calculate power from voltage and current
     double power = volts * curr / 1000;
