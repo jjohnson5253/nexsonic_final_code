@@ -36,10 +36,11 @@ unsigned char *powerString;
 unsigned char *endMsg;
 unsigned char *msg;
 uint16_t receivedChar;
-int dutyCycle = 1040;
+uint16_t dutyCycle = 1040;
 double dutyCycleTrack = 0.5;
-unsigned int period = 800; // about 56kHz
-int guiState = 0;
+uint16_t period = 861; // about 56kHz
+uint16_t hrPeriodPrint;
+uint16_t guiState = 0;
 
 uint16_t adcBResult2;
 uint16_t adcCResult0;
@@ -47,30 +48,30 @@ uint16_t adcCResult6;
 
 uint16_t dacVal = 600;
 
-int currADC_avg; // ADC B2
-int voltADC_avg; // ADC C0
+uint16_t currADC_avg; // ADC B2
+uint16_t voltADC_avg; // ADC C0
 
-int currADCValues[100];
-int voltADCValues[100];
-int voltValues[100];
-int currValues[100];
-int powerValues[100];
-int impedanceValues[100];
-int freqValues[100];
+uint16_t currADCValues[100];
+uint16_t voltADCValues[100];
+uint16_t voltValues[100];
+uint16_t currValues[100];
+uint16_t powerValues[100];
+uint16_t impedanceValues[100];
+uint16_t freqValues[100];
 
-double tenThou;
-double thou;
-double hun;
-double ten;
-double one; /// TODO: WHY DO I GET WRONG INPUT VALUE ( 134 ) WHEN I add this multiply by 1?????
+//double tenThou;
+//double thou;
+//double hun;
+//double ten;
+//double one; /// TODO: WHY DO I GET WRONG INPUT VALUE ( 134 ) WHEN I add this multiply by 1?????
 
-int periodCnt;
+uint16_t periodCnt;
 
 //
 // Globals
 //
 uint16_t UpdateFine, PeriodFine, status;
-int MEP_ScaleFactor; // Global variable used by the SFO library
+uint16_t MEP_ScaleFactor; // Global variable used by the SFO library
                      // Result can be used for all HRPWM channels
                      // This variable is also copied to HRMSTEP
                      // register by SFO(0) function.
@@ -98,7 +99,7 @@ void otherHrPwmSetup(){
     //
     // ePWM and HRPWM register initialization
     //
-    int i;
+    uint16_t i;
     for(i=1; i<PWM_CH; i++)
     {
         // Change clock divider to /1
@@ -209,13 +210,13 @@ void run_duty_cycle_menu(){
 
     double dutyCyclePercent = (double)dutyCycle/(double)period * 100;
 
-    // print freq value for python GUI to read
-    my_itoa((int)dutyCyclePercent, dutyString);
+    // pruint16_t freq value for python GUI to read
+    my_itoa((uint16_t)dutyCyclePercent, dutyString);
 
-    // print msg
+    // pruint16_t msg
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)dutyString, 7);
 
-    // print a new line (need for python GUI to know when to stop reading)
+    // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
@@ -247,13 +248,18 @@ void run_frequency_menu(){
            break;
     }
 
-    // print freq value for python GUI to read
-    my_itoa((47980859/period), freq); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
+    // calculate period with hr resolution:
+    // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+    // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+    hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
 
-    // print msg
+    // pruint16_t freq value for python GUI to read
+    my_itoa(hrPeriodPrint, freq);
+
+    // pruint16_t msg
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
 
-    // print a new line (need for python GUI to know when to stop reading)
+    // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
@@ -269,7 +275,7 @@ void run_hr_freq_menu(){
     switch(receivedChar) {
        case 49  : // decrease HR Freq (increase PeriodFine)
            if(PeriodFine < 0xFDE8){
-               PeriodFine = PeriodFine + 100;
+               PeriodFine = PeriodFine + 793; // dec about 1Hz
 
                for(i=1; i<PWM_CH; i++)
                {
@@ -295,8 +301,8 @@ void run_hr_freq_menu(){
 
            break;
        case 50  : // increase HR Freq (decrease PeriodFine)
-           if(PeriodFine > 0x3333){
-               PeriodFine = PeriodFine - 100;
+           if(PeriodFine > 0x364C){ // 13900
+               PeriodFine = PeriodFine - 793; // inc about 1Hz
 
                for(i=1; i<PWM_CH; i++)
                {
@@ -304,7 +310,7 @@ void run_hr_freq_menu(){
                }
            }
            else{
-               // decrement sysclk period
+               // decrement sysclk period (increase freq)
                period = period - 1;
                configHRPWM(period);
 
@@ -325,8 +331,13 @@ void run_hr_freq_menu(){
            break;
     }
 
+    // calculate period with hr resolution:
+    // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+    // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+    hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
+
     // print freq value for python GUI to read
-    my_itoa((47980859/period), freq); // 56000 * 2080 / period ... we know 56000 corresponds to 2080 period count
+    my_itoa(hrPeriodPrint, freq);
 
     // print msg
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
@@ -373,15 +384,15 @@ void run_dac_menu(){
            break;
     }
 
-    // note: all values in equation must be doubles not ints to prevent overflow
+    // note: all values in equation must be doubles not uint16_ts to prevent overflow
     double dacInVolts = ((double)dacVal * 3300)/4096;
 
-    // print dac value for python GUI to read
-    my_itoa((int)dacInVolts, dac);
-    // print msg
+    // pruint16_t dac value for python GUI to read
+    my_itoa((uint16_t)dacInVolts, dac);
+    // pruint16_t msg
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
 
-    // print a new line (need for python GUI to know when to stop reading)
+    // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
@@ -394,8 +405,8 @@ void run_freq_sweep_menu(){
 
    periodCnt = 0;
 
-   // set frequency at 55kHz
-   period = 870;
+   // set frequency at 55726Hz
+   period = 861;
    EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
    // Beep buzzer once indicating start
@@ -404,7 +415,7 @@ void run_freq_sweep_menu(){
    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
    // sweep
-   while(period > 830){
+   while(period > 850){ // 56448Hz
 
        // read ADC current
        currADC_avg = avg_ADC_curr();
@@ -421,12 +432,12 @@ void run_freq_sweep_menu(){
        // calculate impedance and power from voltage and current
        double impedance = volts / curr * 1000;
        double power = volts * curr / 1000;
-       int intPower = (int)power;
-       int intImpedance = (int)impedance;
+       uint16_t uint16_tPower = (uint16_t)power;
+       uint16_t uint16_tImpedance = (uint16_t)impedance;
 
-       int periodPrint = (47980859/period);
+       uint16_t periodPrint = (48194475/period);
 
-       // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
+       // pruint16_t values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
 
        // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
        // any other character array
@@ -449,25 +460,25 @@ void run_freq_sweep_menu(){
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
        volt = "      ";
-       my_itoa((int)volts, volt);
+       my_itoa((uint16_t)volts, volt);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
        currString = "      ";
-       my_itoa((int)(curr), currString);
+       my_itoa((uint16_t)(curr), currString);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
        impedanceString = "      ";
-       my_itoa(intImpedance, impedanceString);
+       my_itoa(uint16_tImpedance, impedanceString);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
        powerString = "      ";
-       my_itoa(intPower, powerString);
+       my_itoa(uint16_tPower, powerString);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
@@ -521,10 +532,10 @@ void readAndSendADC(){
     // calculate impedance and power from voltage and current
     double impedance = volts / curr * 1000;
     double power = volts * curr / 1000;
-    int intPower = (int)power;
-    int intImpedance = (int)impedance;
+    uint16_t uint16_tPower = (uint16_t)power;
+    uint16_t uint16_tImpedance = (uint16_t)impedance;
 
-    // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
+    // pruint16_t values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
     rawADCvolt = "      ";
     my_itoa(voltADC_avg, rawADCvolt);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
@@ -538,25 +549,25 @@ void readAndSendADC(){
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
     volt = "      ";
-    my_itoa((int)volts, volt);
+    my_itoa((uint16_t)volts, volt);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
     currString = "      ";
-    my_itoa((int)(curr), currString);
+    my_itoa((uint16_t)(curr), currString);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
     impedanceString = "      ";
-    my_itoa(intImpedance, impedanceString);
+    my_itoa(uint16_tImpedance, impedanceString);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
     powerString = "      ";
-    my_itoa(intPower, powerString);
+    my_itoa(uint16_tPower, powerString);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
@@ -567,14 +578,18 @@ void sendSettingsVals(){
     // find dac
     double dacInVolts = ((double)dacVal * 3300)/4096;
 
-    // print freq
-    my_itoa((47980859/period), freq);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+    // calculate period with hr resolution:
+    // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+    // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+    hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
+
+    // pruint16_t freq value for python GUI to read
+    my_itoa(hrPeriodPrint, freq);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    // print DAC
-    my_itoa((int)dacInVolts, dac);
+    // pruint16_t DAC
+    my_itoa((uint16_t)dacInVolts, dac);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
@@ -583,25 +598,25 @@ void sendSettingsVals(){
 
 void powerTrackAndSend(){
 
-    int prevPower3 = 0;
-    int prevPower2 = 0;
-    int prevPower1 = 0;
-    int currPower = 0;
-    int nextPower1 = 0;
-    int nextPower2 = 0;
-    int nextPower3 = 0;
+    uint16_t prevPower3 = 0;
+    uint16_t prevPower2 = 0;
+    uint16_t prevPower1 = 0;
+    uint16_t currPower = 0;
+    uint16_t nextPower1 = 0;
+    uint16_t nextPower2 = 0;
+    uint16_t nextPower3 = 0;
 
-    int prevPowTotal = 0;
-    int nextPowTotal = 0;
-    int currPowTotal = 0;
+    uint16_t prevPowTotal = 0;
+    uint16_t nextPowTotal = 0;
+    uint16_t currPowTotal = 0;
 
-    int prev3Period = period - 3;
-    int prev2Period = period - 2;
-    int prev1Period = period - 1;
-    int currPeriod = period;
-    int next1Period = period + 1;
-    int next2Period = period + 2;
-    int next3Period = period + 3;
+    uint16_t prev3Period = period - 3;
+    uint16_t prev2Period = period - 2;
+    uint16_t prev1Period = period - 1;
+    uint16_t currPeriod = period;
+    uint16_t next1Period = period + 1;
+    uint16_t next2Period = period + 2;
+    uint16_t next3Period = period + 3;
 
     // turn on LEDs to indicate start of power tracking
     GPIO_writePin(2, 1);
@@ -622,7 +637,7 @@ void powerTrackAndSend(){
     DEVICE_DELAY_US(250000);
     EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
-    int i = 0;
+    uint16_t i = 0;
     for(i=0;i<200;i++){
 
         prevPower3 = powerAtPeriod(prev3Period);
@@ -690,7 +705,7 @@ void powerTrackAndSend(){
 
 }
 
-int powerAtPeriod(int testPeriod){
+uint16_t powerAtPeriod(uint16_t testPeriod){
 
     // update to new period
     period = testPeriod;
@@ -708,9 +723,9 @@ int powerAtPeriod(int testPeriod){
 
     // calculate power from voltage and current
     double power = volts * curr / 1000;
-    int intPower = (int)power;
+    uint16_t uint16_tPower = (uint16_t)power;
 
-    return intPower;
+    return uint16_tPower;
 }
 
 void updatePeriod(){
@@ -724,31 +739,31 @@ void updatePeriod(){
     EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 }
 
-int avg_ADC_curr(){
+uint16_t avg_ADC_curr(){
 
     double avgB2 = 0;
 
-    int i;
+    uint16_t i;
     for(i=0;i<1000;i++){
         read_ADC();
         avgB2 = avgB2 + adcBResult2;
     }
     avgB2 = avgB2 / 1000;
-    return (int)avgB2;
+    return (uint16_t)avgB2;
 }
 
-int avg_ADC_volt(){
+uint16_t avg_ADC_volt(){
 
     double avgC0 = 0;
 
-    int i;
+    uint16_t i;
     for(i=0;i<1000;i++){
         read_ADC();
         avgC0 = avgC0 + adcCResult0;
     }
 
     avgC0 = avgC0 / 1000;
-    return (int)avgC0;
+    return (uint16_t)avgC0;
 }
 
 void read_ADC(){
@@ -830,7 +845,7 @@ void drawSonic(uint16_t smile){
 }
 
 // Implementation of itoa()
-void my_itoa(unsigned int value, char* result){
+void my_itoa(uint16_t value, char* result){
 
     uint16_t temp = 0;
     uint16_t tenThou = 0;
@@ -1008,7 +1023,7 @@ void initHRPWM8GPIO(void)
     EALLOW;
 
     //
-    // Disable internal pull-up for the selected output pins
+    // Disable uint16_ternal pull-up for the selected output pins
     // for reduced power consumption
     // Pull-ups can be enabled or disabled by the user.
     //
@@ -1027,34 +1042,27 @@ void initHRPWM8GPIO(void)
 }
 
 
-void my_str_to_int(char* input, int intResult){
+uint16_t my_str_to_int(unsigned char* input){
 
-//    int input4 = (int)input[4] - 48;
-//    int input3 = (int)input[3] - 48;
-//    int input2 = (int)input[2] - 48;
-//    int input1 = (int)input[1] - 48;
-//    int input0 = (int)input[0] - 48;
+    uint16_t input4 = (uint16_t)input[4] - 48;
+    uint16_t input3 = (uint16_t)input[3] - 48;
+    uint16_t input2 = (uint16_t)input[2] - 48;
+    uint16_t input1 = (uint16_t)input[1] - 48;
+    uint16_t input0 = (uint16_t)input[0] - 48;
 
-//    double doubleInput4 = (double)input4;
-//    double doubleInput3 = (double)input3;
-//    double doubleInput2 = (double)input2;
-//    double doubleInput1 = (double)input1;
-//    double doubleInput0 = (double)input0;
+    uint16_t tenThou = input0 * 10000;
+    uint16_t thou = input1 * 1000;
+    uint16_t hun = input2 * 100;
+    uint16_t ten = input3 * 10;
+    uint16_t one = input4;
 
-    tenThou = (int)input[4] - 48 * 10000;
-    thou = (int)input[3] - 48 * 1000;
-    hun = (int)input[2] - 48 * 100;
-    ten = (int)input[1] - 48 * 10;
-    one = (int)input[0] - 48; /// TODO: WHY DO I GET WRONG INPUT VALUE ( 134 ) WHEN I add this multiply by 1?????
+    uint16_t sum = tenThou + thou + hun + ten + one;
 
-    double sum = tenThou + thou + hun + ten + one;
+    uint16_t intResult = (uint16_t)sum;
 
-    intResult = (int)sum;
+    return intResult;
 }
 
-//void performStrToIntCalc(double input[4], double input[3], double){
-//
-//}
 
 void readAndSetFreq(){
 
@@ -1062,35 +1070,50 @@ void readAndSetFreq(){
     readFreq = "     ";
 
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-    int receivedCharInt = (int)receivedChar;
-//    char receivedCharIntString = (char)receivedCharInt;
-    readFreq[0] = (char)receivedCharInt;
+    uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
+//    char receivedCharuint16_tString = (char)receivedCharuint16_t;
+    readFreq[0] = (char)receivedCharuint16_t;
 
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-    receivedCharInt = (int)receivedChar;
-//    receivedCharIntString = (char)receivedCharInt;
-    readFreq[1] = (char)receivedCharInt;
+    receivedCharuint16_t = (uint16_t)receivedChar;
+//    receivedCharuint16_tString = (char)receivedCharuint16_t;
+    readFreq[1] = (char)receivedCharuint16_t;
 
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-    receivedCharInt = (int)receivedChar;
-//    receivedCharIntString = (char)receivedCharInt;
-    readFreq[2] = (char)receivedCharInt;
+    receivedCharuint16_t = (uint16_t)receivedChar;
+//    receivedCharuint16_tString = (char)receivedCharuint16_t;
+    readFreq[2] = (char)receivedCharuint16_t;
 
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-    receivedCharInt = (int)receivedChar;
-//    receivedCharIntString = (char)receivedCharInt;
-    readFreq[3] = (char)receivedCharInt;
+    receivedCharuint16_t = (uint16_t)receivedChar;
+//    receivedCharuint16_tString = (char)receivedCharuint16_t;
+    readFreq[3] = (char)receivedCharuint16_t;
 
     receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
-    receivedCharInt = (int)receivedChar;
-//    receivedCharIntString = (char)receivedCharInt;
-    readFreq[4] = (char)receivedCharInt;
+    receivedCharuint16_t = (uint16_t)receivedChar;
+//    receivedCharuint16_tString = (char)receivedCharuint16_t;
+    readFreq[4] = (char)receivedCharuint16_t;
 
-    int convertedStrToIntFreq = 0;
+    // convert char to string
+    uint16_t convertedStrToIntFreq = my_str_to_int(readFreq);
 
-    my_str_to_int(readFreq, convertedStrToIntFreq);
+    // set period
+    period = 48194475/ convertedStrToIntFreq;
 
-    period = 116480000/ convertedStrToIntFreq;
+    // calculate period with hr resolution:
+    // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+    // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+    hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
+
+    // pruint16_t freq value for python GUI to read
+    my_itoa(hrPeriodPrint, freq);
+
+    // pruint16_t msg
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+
+    // pruint16_t a new line (need for python GUI to know when to stop reading)
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
 }
 

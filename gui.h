@@ -15,10 +15,10 @@
 extern uint16_t receivedChar;
 extern unsigned char *msg;
 
-extern int dutyCycle;
+extern uint16_t dutyCycle;
 extern double dutyCycleTrack;
-extern unsigned int period;
-extern int guiState;
+extern uint16_t period;
+extern uint16_t guiState;
 
 // functions
 void run_main_menu();
