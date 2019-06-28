@@ -145,13 +145,6 @@ void run_gui(){
 
         case 52: // 4
             run_freq_sweep_menu();
-
-//            // send stop sweep message so python knows to stop reading
-//            endMsg = "ENDSWP";
-//            SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
-//            msg = "\n";
-//            SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
             break;
 
         case 53: // 5
@@ -174,6 +167,14 @@ void run_gui(){
         case 57: // 9
             run_hr_freq_menu();
             readAndSendADC();
+            break;
+
+        case 97: // a
+            turnOffPwms();
+            break;
+
+        case 98: // b
+            turnOnPwms();
             break;
     }
 }
@@ -404,9 +405,10 @@ void run_freq_sweep_menu(){
    GPIO_writePin(5, 1);
 
    periodCnt = 0;
+   uint16_t i = 0;
 
-   // set frequency at 55726Hz
-   period = 861;
+   // set frequency
+   period = 863;
    EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
    // Beep buzzer once indicating start
@@ -415,7 +417,7 @@ void run_freq_sweep_menu(){
    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
    // sweep
-   while(period > 850){ // 56448Hz
+   while(period > 854){ // set end freq
 
        // read ADC current
        currADC_avg = avg_ADC_curr();
@@ -435,14 +437,17 @@ void run_freq_sweep_menu(){
        uint16_t uint16_tPower = (uint16_t)power;
        uint16_t uint16_tImpedance = (uint16_t)impedance;
 
-       uint16_t periodPrint = (48194475/period);
+       // Print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
 
-       // pruint16_t values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
+       // calculate period with hr resolution:
+       // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+       // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+       hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
 
        // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
        // any other character array
        rawADCvolt = "      ";
-       my_itoa(periodPrint, rawADCvolt);
+       my_itoa(hrPeriodPrint, rawADCvolt);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
@@ -483,16 +488,39 @@ void run_freq_sweep_menu(){
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       // increase frequency
-       period = period - 1;
+       // increase by 1 Hz
+       if(PeriodFine > 0x364C){ // 13900
+          PeriodFine = PeriodFine - 793; // inc about 1Hz
 
-       // update duty cycle to new period
-       dutyCycle = period * dutyCycleTrack;
-       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+          for(i=1; i<PWM_CH; i++)
+          {
+              (*ePWM[i]).TBPRDHR = PeriodFine; //In Q16 format
+          }
+       }
+       else{
+          // decrement sysclk period (increase freq)
+          period = period - 1;
+          configHRPWM(period);
 
-       // update period
-       EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+          // reset PeriodFine to a little less than highest value
+          PeriodFine = 0xFFBE;
+
+          for(i=1; i<PWM_CH; i++)
+          {
+              (*ePWM[i]).TBPRDHR = PeriodFine; //In Q16 format
+          }
+       }
+
+       status = SFO(); // in background, MEP calibration module
+                                  // continuously updates MEP_ScaleFactor
+
+//       // update duty cycle to new period
+//       dutyCycle = period * dutyCycleTrack;
+//       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
+//       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+
+//       // update period
+//       EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
        // wait 0.06 seconds (I think)
        DEVICE_DELAY_US(100000);
@@ -535,7 +563,7 @@ void readAndSendADC(){
     uint16_t uint16_tPower = (uint16_t)power;
     uint16_t uint16_tImpedance = (uint16_t)impedance;
 
-    // pruint16_t values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
+    // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
     rawADCvolt = "      ";
     my_itoa(voltADC_avg, rawADCvolt);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
@@ -980,8 +1008,8 @@ void configHRPWM(uint16_t period)
 
         (*ePWM[j]).AQCTLA.bit.CAU = AQ_SET;             // PWM toggle high/low
         (*ePWM[j]).AQCTLA.bit.CAD = AQ_CLEAR;
-        (*ePWM[j]).AQCTLB.bit.CBU = AQ_SET;             // PWM toggle high/low
-        (*ePWM[j]).AQCTLB.bit.CBD = AQ_CLEAR;
+        (*ePWM[j]).AQCTLB.bit.CBU = AQ_CLEAR;             // PWM toggle high/low
+        (*ePWM[j]).AQCTLB.bit.CBD = AQ_SET;
 
         EALLOW;
         (*ePWM[j]).HRCNFG.all = 0x0;
@@ -1012,7 +1040,9 @@ void configHRPWM(uint16_t period)
                                                    // resolution phase to
                                                    // start HR period
         EDIS;
+
     }
+
 }
 
 //
@@ -1100,6 +1130,8 @@ void readAndSetFreq(){
     // set period
     period = 48194475/ convertedStrToIntFreq;
 
+    configHRPWM(period);
+
     // calculate period with hr resolution:
     // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
     // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
@@ -1117,6 +1149,21 @@ void readAndSetFreq(){
 
 }
 
+// https://e2e.ti.com/support/microcontrollers/c2000/f/171/t/741374?CCS-LAUNCHXL-F28379D-Epwm-Enable-Disable
+void turnOffPwms(){
 
+    EALLOW;
+    EPwm8Regs.TZFRC.bit.OST = 1;
+    EPwm8Regs.TZCTL.bit.TZA = 0x02; // fOR FORCE low
+    EPwm8Regs.TZCTL.bit.TZB = 0x02; //fOR fORCE loW
+    EDIS;
+}
 
+void turnOnPwms(){
+
+    EALLOW;
+    EPwm8Regs.TZCLR.bit.OST = 0x01; // fOR FORCE low
+    EPwm8Regs.TZCLR.bit.OST = 0x01; //fOR fORCE loW
+    EDIS;
+}
 
