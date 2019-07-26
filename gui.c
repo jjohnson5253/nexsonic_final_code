@@ -34,22 +34,28 @@ unsigned char *dac;
 unsigned char *impedanceString;
 unsigned char *powerString;
 unsigned char *endMsg;
+unsigned char *lengthofSweepStr;
 unsigned char *msg;
 uint16_t receivedChar;
 uint16_t dutyCycle = 1040;
 double dutyCycleTrack = 0.5;
-float adcCntPerMv = 0.245*4096/3300; // counts per millivolt (0.304)
-float mvPerAdcCnt = 3.28947; // 1/(0.304) counts per millivolt
-float adcCntPerMa = 0.24824*2;
-float maPerAdcCnt = 1/(0.24824*2);
+
+double adcCntPerMv = 0.245*4096/3300; // counts per millivolt (0.304)
+double mvPerAdcCnt = 3.28947; // 1/(0.304) counts per millivolt
+double adcCntPerMa = 0.24824*2;
+double maPerAdcCnt = 1/(0.24824*2);
+
 uint16_t period = 861; // about 56kHz
 uint16_t hrPeriodPrint;
 uint16_t guiState = 0;
-float voltSensorGain = 0.245 * 4096 / 3.3;
+double voltSensorGain = 0.245 * 4096 / 3.3;
 
 uint16_t adcBResult2;
 uint16_t adcCResult0;
 uint16_t adcCResult6;
+
+uint16_t startSweepFreq;
+uint16_t stopSweepFreq;
 
 uint16_t dacVal = 600;
 
@@ -180,6 +186,14 @@ void run_gui(){
 
         case 98: // b
             turnOnPwms();
+            break;
+
+        case 99: // c
+            readAndSetStartSweepFreq();
+            break;
+
+        case 100: // d
+            readAndSetStopSweepFreq();
             break;
     }
 }
@@ -412,17 +426,103 @@ void run_freq_sweep_menu(){
    periodCnt = 0;
    uint16_t i = 0;
 
-   // set start frequency
-   period = 864;
-   EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+   // set period... 48194475 = 55975 * 861 (we know 55975 corresponds to 861 period counts)
+   period = 48194475/ startSweepFreq;
+
+   // reset PeriodFine to a little more than lowest value
+   PeriodFine = 0x3334;
+
+   int k;
+   for(k=1; k<PWM_CH; k++)
+   {
+       (*ePWM[k]).TBPRDHR = PeriodFine; //In Q16 format
+   }
+
+   // add HR adjustment
+   int freqWithoutHR = (48194475/period);
+   int diffFromSetFreq = freqWithoutHR - startSweepFreq;
+
+   if(diffFromSetFreq > 0){ // decrement by difference
+       int i;
+       int j;
+       for(i=0;i<diffFromSetFreq;i++){
+           if(PeriodFine < 0xFDE8){
+               PeriodFine = PeriodFine + 793; // dec about 1Hz
+
+               for(j=1; j<PWM_CH; j++)
+               {
+                   (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+               }
+           }
+           else{
+               // increment sysclk period
+               period = period + 1;
+               configHRPWM(period);
+
+               // reset PeriodFine to a little more than lowest value
+               PeriodFine = 0x3334;
+
+               for(j=1; j<PWM_CH; j++)
+               {
+                   (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+               }
+           }
+
+           status = SFO(); // in background, MEP calibration module
+                           // continuously updates MEP_ScaleFactor
+       }
+   }
+   else if(diffFromSetFreq < 0){ // increment by difference
+       int i;
+       int j;
+       for(i=0;i<(diffFromSetFreq * (-1));i++){
+           if(PeriodFine > 0x364C){ // 13900
+               PeriodFine = PeriodFine - 793; // inc about 1Hz
+
+               for(j=1; j<PWM_CH; j++)
+               {
+                   (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+               }
+           }
+           else{
+               // decrement sysclk period (increase freq)
+               period = period - 1;
+               configHRPWM(period);
+
+               // reset PeriodFine to a little less than highest value
+               PeriodFine = 0xFFBE;
+
+               for(j=1; j<PWM_CH; j++)
+               {
+                   (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+               }
+           }
+
+           status = SFO(); // in background, MEP calibration module
+                           // continuously updates MEP_ScaleFactor
+       }
+   }
+
+   // set start freq
+   configHRPWM(period);
 
    // Beep buzzer once indicating start
    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
    DEVICE_DELAY_US(250000);
    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
+   // send length of sweep to GUI
+   uint16_t lengthOfSweep = stopSweepFreq - startSweepFreq;
+   lengthofSweepStr = "       ";
+   my_itoa(lengthOfSweep, lengthofSweepStr);
+   SCI_writeCharArray(SCIB_BASE, (uint16_t*)lengthofSweepStr, 8);
+   msg = "\n";
+   SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+   // TODO: check why the freq doesn't increment a couple times when sending to GUI at 56040
    // sweep
-   while(period > 858){ // set end freq
+   uint16_t p;
+   for(p=0;p<lengthOfSweep;p++){ // set end freq
 
        // read ADC current
        currADC_avg = avg_ADC_curr();
@@ -453,45 +553,45 @@ void run_freq_sweep_menu(){
 
        // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
        // any other character array
-       rawADCvolt = "      ";
+       rawADCvolt = "       ";
        my_itoa(hrPeriodPrint, rawADCvolt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       rawADCvolt = "      ";
+       rawADCvolt = "       ";
        my_itoa(voltADC_avg, rawADCvolt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       rawADCcurr = "      ";
+       rawADCcurr = "       ";
        my_itoa(currADC_avg, rawADCcurr);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       volt = "      ";
+       volt = "       ";
        my_itoa((uint16_t)volts, volt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       currString = "      ";
+       currString = "       ";
        my_itoa((uint16_t)(curr), currString);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-       impedanceString = "      ";
-       my_itoa(uint16_tImpedance, impedanceString);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       powerString = "      ";
+       powerString = "       ";
        my_itoa(uint16_tPower, powerString);
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
+       msg = "\n";
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+       impedanceString = "       ";
+       my_itoa(uint16_tImpedance, impedanceString);
+       SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 8);
        msg = "\n";
        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
@@ -560,52 +660,73 @@ void readAndSendADC(){
 
     // calculate voltage and current from adc values
     double doubleVoltADC_avg = (double)voltADC_avg;
-    double doubleVolts = doubleVoltADC_avg * mvPerAdcCnt;
-    uint16_t volts = (uint16_t)doubleVolts;
+    double volts = doubleVoltADC_avg * mvPerAdcCnt;
     double doubleCurrADC_avg = (double)currADC_avg;
-    double doubleCurr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
-    uint16_t curr = (uint16_t)doubleCurr;
+    double curr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
 
+//    double doubleVoltADC_avg = (double)voltADC_avg;
+//    double volts = (doubleVoltADC_avg * 3300)/4096;
+//    double doubleCurrADC_avg = (double)currADC_avg;
+////    double curr = ((doubleCurrADC_avg * 3300)/4096) * 1;  // 400mV per amp
+//    double curr = 70;
+//
+    // Bug was here: when dividing volts/curr, if value is two places, then multiplying by 1000 is too high for string to convert
     // calculate impedance and power from voltage and current
-    double impedance = doubleVolts / doubleCurr * 1000;
-    double power = doubleVolts * doubleCurr / 1000;
+    double impedance = volts / curr * 1000;
+    double power = volts * curr / 1000;
     uint16_t uint16_tPower = (uint16_t)power;
     uint16_t uint16_tImpedance = (uint16_t)impedance;
 
+    //
+    // old code that works and doesn't mess up... somehow using decimals is messing up the sci
+    //
+//    // calculate voltage and current from adc values
+//    double doubleVoltADC_avg = (double)voltADC_avg;
+//    double volts = (doubleVoltADC_avg * 3300)/4096;
+//    double doubleCurrADC_avg = (double)currADC_avg;
+//    double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
+//
+//    // calculate impedance and power from voltage and current
+//    double impedance = volts / curr * 1000;
+//    double power = volts * curr / 1000;
+//    uint16_t uint16_tPower = (uint16_t)power;
+//    uint16_t uint16_tImpedance = (uint16_t)impedance;
+
+
     // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
-    rawADCvolt = "      ";
+    rawADCvolt = "       ";
     my_itoa(voltADC_avg, rawADCvolt);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    rawADCcurr = "      ";
+    rawADCcurr = "       ";
     my_itoa(currADC_avg, rawADCcurr);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    volt = "      ";
+    volt = "       ";
     my_itoa((uint16_t)volts, volt);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    currString = "      ";
+    currString = "       ";
     my_itoa((uint16_t)(curr), currString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    powerString = "      ";
+    powerString = "       ";
     my_itoa(uint16_tPower, powerString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    impedanceString = "      ";
+    impedanceString = "       ";
     my_itoa(uint16_tImpedance, impedanceString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 8);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
@@ -886,13 +1007,32 @@ void drawSonic(uint16_t smile){
 void my_itoa(uint16_t value, char* result){
 
     uint16_t temp = 0;
+    uint16_t hunThou = 0;
     uint16_t tenThou = 0;
     uint16_t thou = 0;
     uint16_t huns = 0;
     uint16_t tens = 0;
     uint16_t ones = 0;
 
-    if(value > 9999){
+    if(value > 99999){
+        temp = (uint16_t)value/100000;
+        hunThou = (uint16_t)temp;
+        value = value - hunThou*100000;
+        temp = (uint16_t)value/10000;
+        tenThou = (uint16_t)temp;
+        value = value - tenThou*10000;
+        temp = (uint16_t)value/1000;
+        thou = (uint16_t)temp;
+        value = value - thou*1000;
+        temp = (uint16_t)value/100;
+        huns = (uint16_t)temp;
+        value = value - huns*100;
+        temp = (uint16_t)value/10;
+        tens = (uint16_t)temp;
+        value = value - tens*10;
+        ones = (uint16_t)value;
+    }
+    else if(value > 9999){
         temp = (uint16_t)value/10000;
         tenThou = (uint16_t)temp;
         value = value - tenThou*10000;
@@ -939,40 +1079,53 @@ void my_itoa(uint16_t value, char* result){
     }
 
     // only 1 digit
-    if(tenThou==0 && thou==0 && huns==0 && tens==0){
+    if(hunThou==0 && tenThou==0 && thou==0 && huns==0 && tens==0){
         result[0] = 32;
         result[1] = 32;
         result[2] = 32;
         result[3] = 32;
-        result[4] = (char)ones + 48;
+        result[4] = 32;
+        result[5] = (char)ones + 48;
     } // 2 digits
-    else if(tenThou==0 && thou==0 && huns==0){
+    else if(hunThou==0 && tenThou==0 && thou==0 && huns==0){
         result[0] = 32;
         result[1] = 32;
         result[2] = 32;
-        result[3] = (char)tens + 48;
-        result[4] = (char)ones + 48;
+        result[3] = 32;
+        result[4] = (char)tens + 48;
+        result[5] = (char)ones + 48;
     } // 3 digits
-    else if(tenThou==0 && thou==0){
+    else if(hunThou==0 && tenThou==0 && thou==0){
         result[0] = 32;
         result[1] = 32;
-        result[2] = (char)huns + 48;
-        result[3] = (char)tens + 48;
-        result[4] = (char)ones + 48;
+        result[2] = 32;
+        result[3] = (char)huns + 48;
+        result[4] = (char)tens + 48;
+        result[5] = (char)ones + 48;
     } // 4 digits
-    else if(tenThou==0){
+    else if(hunThou==0 && tenThou==0){
         result[0] = 32;
-        result[1] = (char)thou + 48;
-        result[2] = (char)huns + 48;
-        result[3] = (char)tens + 48;
-        result[4] = (char)ones + 48;
+        result[1] = 32;
+        result[2] = (char)thou + 48;
+        result[3] = (char)huns + 48;
+        result[4] = (char)tens + 48;
+        result[5] = (char)ones + 48;
     } // 5 digits
+    else if(hunThou == 0){
+        result[0] = 32;
+        result[1] = (char)tenThou + 48;
+        result[2] = (char)thou + 48;
+        result[3] = (char)huns + 48;
+        result[4] = (char)tens + 48;
+        result[5] = (char)ones + 48;
+    } // 6 digits
     else{
-        result[0] = (char)tenThou + 48;
-        result[1] = (char)thou + 48;
-        result[2] = (char)huns + 48;
-        result[3] = (char)tens + 48;
-        result[4] = (char)ones + 48;
+        result[0] = (char)hunThou + 48;
+        result[1] = (char)tenThou + 48;
+        result[2] = (char)thou + 48;
+        result[3] = (char)huns + 48;
+        result[4] = (char)tens + 48;
+        result[5] = (char)ones + 48;
     }
 }
 
@@ -1142,6 +1295,15 @@ void readAndSetFreq(){
 
     configHRPWM(period);
 
+    // reset PeriodFine to a little more than lowest value
+    PeriodFine = 0x3334;
+
+    int k;
+    for(k=1; k<PWM_CH; k++)
+    {
+        (*ePWM[k]).TBPRDHR = PeriodFine; //In Q16 format
+    }
+
     int freqWithoutHR = (48194475/period);
     int diffFromSetFreq = freqWithoutHR - convertedStrToIntFreq;
     // update freq with HR considered
@@ -1220,6 +1382,71 @@ void readAndSetFreq(){
     // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
+}
+
+void readAndSetStartSweepFreq(){
+
+    unsigned char *readStartFreq;
+    readStartFreq = "     ";
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
+    readStartFreq[0] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStartFreq[1] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStartFreq[2] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStartFreq[3] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStartFreq[4] = (char)receivedCharuint16_t;
+
+    // convert char to string
+    uint16_t convertedStrToIntStartFreq = my_str_to_int(readStartFreq);
+
+    // set sweep start freq
+    startSweepFreq = convertedStrToIntStartFreq;
+}
+
+void readAndSetStopSweepFreq(){
+
+    unsigned char *readStopFreq;
+    readStopFreq = "     ";
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
+    readStopFreq[0] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStopFreq[1] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStopFreq[2] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStopFreq[3] = (char)receivedCharuint16_t;
+
+    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedCharuint16_t = (uint16_t)receivedChar;
+    readStopFreq[4] = (char)receivedCharuint16_t;
+
+    // convert char to string
+    uint16_t convertedStrToIntStopFreq = my_str_to_int(readStopFreq);
+
+    // set sweep stop freq
+    stopSweepFreq = convertedStrToIntStopFreq;
 
 }
 
