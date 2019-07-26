@@ -38,9 +38,14 @@ unsigned char *msg;
 uint16_t receivedChar;
 uint16_t dutyCycle = 1040;
 double dutyCycleTrack = 0.5;
+float adcCntPerMv = 0.245*4096/3300; // counts per millivolt (0.304)
+float mvPerAdcCnt = 3.28947; // 1/(0.304) counts per millivolt
+float adcCntPerMa = 0.24824*2;
+float maPerAdcCnt = 1/(0.24824*2);
 uint16_t period = 861; // about 56kHz
 uint16_t hrPeriodPrint;
 uint16_t guiState = 0;
+float voltSensorGain = 0.245 * 4096 / 3.3;
 
 uint16_t adcBResult2;
 uint16_t adcCResult0;
@@ -407,8 +412,8 @@ void run_freq_sweep_menu(){
    periodCnt = 0;
    uint16_t i = 0;
 
-   // set frequency
-   period = 863;
+   // set start frequency
+   period = 864;
    EPWM_setTimeBasePeriod(EPWM8_BASE, period);
 
    // Beep buzzer once indicating start
@@ -417,7 +422,7 @@ void run_freq_sweep_menu(){
    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
 
    // sweep
-   while(period > 854){ // set end freq
+   while(period > 858){ // set end freq
 
        // read ADC current
        currADC_avg = avg_ADC_curr();
@@ -427,13 +432,15 @@ void run_freq_sweep_menu(){
 
        // calculate voltage and current from adc values
        double doubleVoltADC_avg = (double)voltADC_avg;
-       double volts = (doubleVoltADC_avg * 3300)/4096;
+       double doubleVolts = doubleVoltADC_avg * mvPerAdcCnt;
+       uint16_t volts = (uint16_t)doubleVolts;
        double doubleCurrADC_avg = (double)currADC_avg;
-       double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
+       double doubleCurr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
+       uint16_t curr = (uint16_t)doubleCurr;
 
        // calculate impedance and power from voltage and current
-       double impedance = volts / curr * 1000;
-       double power = volts * curr / 1000;
+       double impedance = doubleVolts / doubleCurr * 1000;
+       double power = doubleVolts * doubleCurr / 1000;
        uint16_t uint16_tPower = (uint16_t)power;
        uint16_t uint16_tImpedance = (uint16_t)impedance;
 
@@ -553,13 +560,15 @@ void readAndSendADC(){
 
     // calculate voltage and current from adc values
     double doubleVoltADC_avg = (double)voltADC_avg;
-    double volts = (doubleVoltADC_avg * 3300)/4096;
+    double doubleVolts = doubleVoltADC_avg * mvPerAdcCnt;
+    uint16_t volts = (uint16_t)doubleVolts;
     double doubleCurrADC_avg = (double)currADC_avg;
-    double curr = ((doubleCurrADC_avg * 3300)/4096 ) *  2;  // 400mV per amp
+    double doubleCurr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
+    uint16_t curr = (uint16_t)doubleCurr;
 
     // calculate impedance and power from voltage and current
-    double impedance = volts / curr * 1000;
-    double power = volts * curr / 1000;
+    double impedance = doubleVolts / doubleCurr * 1000;
+    double power = doubleVolts * doubleCurr / 1000;
     uint16_t uint16_tPower = (uint16_t)power;
     uint16_t uint16_tImpedance = (uint16_t)impedance;
 
@@ -588,17 +597,18 @@ void readAndSendADC(){
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
+    powerString = "      ";
+    my_itoa(uint16_tPower, powerString);
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
+    msg = "\n";
+    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+
     impedanceString = "      ";
     my_itoa(uint16_tImpedance, impedanceString);
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 7);
     msg = "\n";
     SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
-    powerString = "      ";
-    my_itoa(uint16_tPower, powerString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 7);
-    msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 }
 
 void sendSettingsVals(){
@@ -1127,10 +1137,74 @@ void readAndSetFreq(){
     // convert char to string
     uint16_t convertedStrToIntFreq = my_str_to_int(readFreq);
 
-    // set period
+    // set period... 48194475 = 55975 * 861 (we know 55975 corresponds to 861 period counts)
     period = 48194475/ convertedStrToIntFreq;
 
     configHRPWM(period);
+
+    int freqWithoutHR = (48194475/period);
+    int diffFromSetFreq = freqWithoutHR - convertedStrToIntFreq;
+    // update freq with HR considered
+    if(diffFromSetFreq > 0){ // decrement by difference
+        int i;
+        int j;
+        for(i=0;i<diffFromSetFreq;i++){
+            if(PeriodFine < 0xFDE8){
+                PeriodFine = PeriodFine + 793; // dec about 1Hz
+
+                for(j=1; j<PWM_CH; j++)
+                {
+                    (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+                }
+            }
+            else{
+                // increment sysclk period
+                period = period + 1;
+                configHRPWM(period);
+
+                // reset PeriodFine to a little more than lowest value
+                PeriodFine = 0x3334;
+
+                for(j=1; j<PWM_CH; j++)
+                {
+                    (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+                }
+            }
+
+            status = SFO(); // in background, MEP calibration module
+                            // continuously updates MEP_ScaleFactor
+        }
+    }
+    else if(diffFromSetFreq < 0){ // increment by difference
+        int i;
+        int j;
+        for(i=0;i<(diffFromSetFreq * (-1));i++){
+            if(PeriodFine > 0x364C){ // 13900
+                PeriodFine = PeriodFine - 793; // inc about 1Hz
+
+                for(j=1; j<PWM_CH; j++)
+                {
+                    (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+                }
+            }
+            else{
+                // decrement sysclk period (increase freq)
+                period = period - 1;
+                configHRPWM(period);
+
+                // reset PeriodFine to a little less than highest value
+                PeriodFine = 0xFFBE;
+
+                for(j=1; j<PWM_CH; j++)
+                {
+                    (*ePWM[j]).TBPRDHR = PeriodFine; //In Q16 format
+                }
+            }
+
+            status = SFO(); // in background, MEP calibration module
+                            // continuously updates MEP_ScaleFactor
+        }
+    }
 
     // calculate period with hr resolution:
     // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
