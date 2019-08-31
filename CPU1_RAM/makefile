@@ -174,34 +174,34 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-main_code_python_gui_hr.out \
+main_code_python_gui_hr_launchpad.out \
 
 EXE_OUTPUTS__QUOTED += \
-"main_code_python_gui_hr.out" \
+"main_code_python_gui_hr_launchpad.out" \
 
 BIN_OUTPUTS += \
-main_code_python_gui_hr.hex \
+main_code_python_gui_hr_launchpad.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"main_code_python_gui_hr.hex" \
+"main_code_python_gui_hr_launchpad.hex" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "main_code_python_gui_hr.out"
+	@$(MAKE) --no-print-directory -Onone "main_code_python_gui_hr_launchpad.out"
 
 # Tool invocations
-main_code_python_gui_hr.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
+main_code_python_gui_hr_launchpad.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: C2000 Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"main_code_python_gui_hr.map" --stack_size=0x400 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="main_code_python_gui_hr_linkInfo.xml" --entry_point=code_start --rom_model -o "main_code_python_gui_hr.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/cl2000" -v28 -ml -mt --cla_support=cla2 --float_support=fpu32 --tmu_support=tmu0 --vcu_support=vcu0 -Ooff --define=CPU1 --diag_suppress=10063 --diag_warning=225 --diag_wrap=off --display_error_number -z -m"main_code_python_gui_hr_launchpad.map" --stack_size=0x400 --warn_sections -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/lib" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/include" --reread_libs --diag_wrap=off --display_error_number --xml_link_info="main_code_python_gui_hr_launchpad_linkInfo.xml" --entry_point=code_start --rom_model -o "main_code_python_gui_hr_launchpad.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 
-main_code_python_gui_hr.hex: $(EXE_OUTPUTS)
+main_code_python_gui_hr_launchpad.hex: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: C2000 Hex Utility'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "main_code_python_gui_hr.hex" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-c2000_18.1.3.LTS/bin/hex2000"  -o "main_code_python_gui_hr_launchpad.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
 

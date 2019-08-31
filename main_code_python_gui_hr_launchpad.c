@@ -149,19 +149,20 @@ void main(void)
     GPIO_setPadConfig(4, GPIO_PIN_TYPE_STD);
     GPIO_setPinConfig(GPIO_4_EPWM3A);
 
-    // GPIO3 is the SCI Rx pin.
-    GPIO_setMasterCore(57, GPIO_CORE_CPU1);
-    GPIO_setPinConfig(GPIO_57_SCIRXDB);
-    GPIO_setDirectionMode(57, GPIO_DIR_MODE_IN);
-    GPIO_setPadConfig(57, GPIO_PIN_TYPE_STD);
-    GPIO_setQualificationMode(57, GPIO_QUAL_ASYNC);
+    // GPIO28 is the SCI Rx pin.
+    GPIO_setMasterCore(28, GPIO_CORE_CPU1);
+    GPIO_setPinConfig(GPIO_28_SCIRXDA);
+    GPIO_setDirectionMode(28, GPIO_DIR_MODE_IN);
+    GPIO_setPadConfig(28, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(28, GPIO_QUAL_ASYNC);
 
-    // GPIO2 is the SCI Tx pin.
-    GPIO_setMasterCore(56, GPIO_CORE_CPU1);
-    GPIO_setPinConfig(GPIO_56_SCITXDB);
-    GPIO_setDirectionMode(56, GPIO_DIR_MODE_OUT);
-    GPIO_setPadConfig(56, GPIO_PIN_TYPE_STD);
-    GPIO_setQualificationMode(56, GPIO_QUAL_ASYNC);
+    // GPIO29 is the SCI Tx pin.
+    GPIO_setMasterCore(29, GPIO_CORE_CPU1);
+    GPIO_setPinConfig(GPIO_29_SCITXDA);
+    GPIO_setDirectionMode(29, GPIO_DIR_MODE_OUT);
+    GPIO_setPadConfig(29, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(29, GPIO_QUAL_ASYNC);
+
 
     // turn gpio 13 high
     GPIO_setPinConfig(GPIO_13_GPIO13);
@@ -217,27 +218,27 @@ void main(void)
     //
     InitPieVectTable();
 
-    // Initialize SCIB and its FIFO.
-    SCI_performSoftwareReset(SCIB_BASE);
+    // Initialize SCIA and its FIFO.
+    SCI_performSoftwareReset(SCIA_BASE);
 
-    // Configure SCIB for echoback.
-    SCI_setConfig(SCIB_BASE, DEVICE_LSPCLK_FREQ, 9600, (SCI_CONFIG_WLEN_8 |
+    // Configure SCIA for echoback.
+    SCI_setConfig(SCIA_BASE, DEVICE_LSPCLK_FREQ, 9600, (SCI_CONFIG_WLEN_8 |
                                                         SCI_CONFIG_STOP_ONE |
                                                         SCI_CONFIG_PAR_NONE));
-    SCI_resetChannels(SCIB_BASE);
-    SCI_resetRxFIFO(SCIB_BASE);
-    SCI_resetTxFIFO(SCIB_BASE);
-    SCI_clearInterruptStatus(SCIB_BASE, SCI_INT_TXFF | SCI_INT_RXFF);
-    SCI_enableFIFO(SCIB_BASE);
-    SCI_enableModule(SCIB_BASE);
-    SCI_performSoftwareReset(SCIB_BASE);
+    SCI_resetChannels(SCIA_BASE);
+    SCI_resetRxFIFO(SCIA_BASE);
+    SCI_resetTxFIFO(SCIA_BASE);
+    SCI_clearInterruptStatus(SCIA_BASE, SCI_INT_TXFF | SCI_INT_RXFF);
+    SCI_enableFIFO(SCIA_BASE);
+    SCI_enableModule(SCIA_BASE);
+    SCI_performSoftwareReset(SCIA_BASE);
 
     #ifdef AUTOBAUD
         //
         // Perform an autobaud lock.
         // SCI expects an 'a' or 'A' to lock the baud rate.
         //
-        SCI_lockAutobaud(SCIB_BASE);
+        SCI_lockAutobaud(SCIA_BASE);
     #endif
 
     // Disable sync(Freeze clock to PWM as well)

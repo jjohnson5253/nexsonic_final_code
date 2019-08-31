@@ -4,7 +4,7 @@
  *  Created on: Apr 13, 2019
  *      Author: jake
  *
- *  NOTE: when transferring this to custom board, replace all SCIB_BASE with SCIB_BASE
+ *  NOTE: when transferring this to custom board, replace all SCIA_BASE with SCIA_BASE
  */
 
 // Includes
@@ -137,7 +137,7 @@ void otherHrPwmSetup(){
 void run_gui(){
 
     // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
 
     switch(receivedChar){
         case 49: // 1
@@ -201,7 +201,7 @@ void run_gui(){
 void run_duty_cycle_menu(){
 
     // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
 
     switch(receivedChar) {
        case 49  :
@@ -234,17 +234,17 @@ void run_duty_cycle_menu(){
     my_itoa((uint16_t)dutyCyclePercent, dutyString);
 
     // pruint16_t msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dutyString, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)dutyString, 7);
 
     // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 }
 
 void run_frequency_menu(){
 
     // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
 
     switch(receivedChar) {
        case 49  :
@@ -277,17 +277,17 @@ void run_frequency_menu(){
     my_itoa(hrPeriodPrint, freq);
 
     // pruint16_t msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)freq, 7);
 
     // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 }
 
 void run_hr_freq_menu(){
 
     // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
 
     uint16_t i = 0;
 
@@ -360,27 +360,27 @@ void run_hr_freq_menu(){
     my_itoa(hrPeriodPrint, freq);
 
     // print msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)freq, 7);
 
     // print a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     // print hr freq value for python GUI to read
     my_itoa(PeriodFine, hrfreq);
 
     // print msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)hrfreq, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)hrfreq, 7);
 
     // print a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
 }
 
 void run_dac_menu(){
     // Read a character from the FIFO.
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
 
     switch(receivedChar) {
        case 49  :
@@ -410,11 +410,11 @@ void run_dac_menu(){
     // pruint16_t dac value for python GUI to read
     my_itoa((uint16_t)dacInVolts, dac);
     // pruint16_t msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)dac, 7);
 
     // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 }
 
 
@@ -515,85 +515,16 @@ void run_freq_sweep_menu(){
    uint16_t lengthOfSweep = stopSweepFreq - startSweepFreq;
    lengthofSweepStr = "       ";
    my_itoa(lengthOfSweep, lengthofSweepStr);
-   SCI_writeCharArray(SCIB_BASE, (uint16_t*)lengthofSweepStr, 8);
+   SCI_writeCharArray(SCIA_BASE, (uint16_t*)lengthofSweepStr, 8);
    msg = "\n";
-   SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+   SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
    // TODO: check why the freq doesn't increment a couple times when sending to GUI at 56040
    // sweep
    uint16_t p;
    for(p=0;p<lengthOfSweep;p++){ // set end freq
 
-       // read ADC current
-       currADC_avg = avg_ADC_curr();
 
-       // read ADC voltage
-       voltADC_avg = avg_ADC_volt();
-
-       // calculate voltage and current from adc values
-       double doubleVoltADC_avg = (double)voltADC_avg;
-       double doubleVolts = doubleVoltADC_avg * mvPerAdcCnt;
-       uint16_t volts = (uint16_t)doubleVolts;
-       double doubleCurrADC_avg = (double)currADC_avg;
-       double doubleCurr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
-       uint16_t curr = (uint16_t)doubleCurr;
-
-       // calculate impedance and power from voltage and current
-       double impedance = doubleVolts / doubleCurr * 1000;
-       double power = doubleVolts * doubleCurr / 1000;
-       uint16_t uint16_tPower = (uint16_t)power;
-       uint16_t uint16_tImpedance = (uint16_t)impedance;
-
-       // Print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
-
-       // calculate period with hr resolution:
-       // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
-       // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
-       hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
-
-       // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
-       // any other character array
-       rawADCvolt = "       ";
-       my_itoa(hrPeriodPrint, rawADCvolt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       rawADCvolt = "       ";
-       my_itoa(voltADC_avg, rawADCvolt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       rawADCcurr = "       ";
-       my_itoa(currADC_avg, rawADCcurr);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       volt = "       ";
-       my_itoa((uint16_t)volts, volt);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       currString = "       ";
-       my_itoa((uint16_t)(curr), currString);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       powerString = "       ";
-       my_itoa(uint16_tPower, powerString);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-       impedanceString = "       ";
-       my_itoa(uint16_tImpedance, impedanceString);
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 8);
-       msg = "\n";
-       SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
 
        // increase by 1 Hz
        if(PeriodFine > 0x364C){ // 13900
@@ -621,19 +552,82 @@ void run_freq_sweep_menu(){
        status = SFO(); // in background, MEP calibration module
                                   // continuously updates MEP_ScaleFactor
 
-//       // update duty cycle to new period
-//       dutyCycle = period * dutyCycleTrack;
-//       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_A, dutyCycle);
-//       EPWM_setCounterCompareValue(EPWM8_BASE, EPWM_COUNTER_COMPARE_B, dutyCycle);
+//       // read ADC current
+//       currADC_avg = avg_ADC_curr();
+//
+//       // read ADC voltage
+//       voltADC_avg = avg_ADC_volt();
+//
+//       // calculate voltage and current from adc values
+//       double doubleVoltADC_avg = (double)voltADC_avg;
+//       double doubleVolts = doubleVoltADC_avg * mvPerAdcCnt;
+//       uint16_t volts = (uint16_t)doubleVolts;
+//       double doubleCurrADC_avg = (double)currADC_avg;
+//       double doubleCurr = doubleCurrADC_avg * maPerAdcCnt;  // 400mV per amp
+//       uint16_t curr = (uint16_t)doubleCurr;
+//
+//       // calculate impedance and power from voltage and current
+//       double impedance = doubleVolts / doubleCurr * 1000;
+//       double power = doubleVolts * doubleCurr / 1000;
+//       uint16_t uint16_tPower = (uint16_t)power;
+//       uint16_t uint16_tImpedance = (uint16_t)impedance;
 
-//       // update period
-//       EPWM_setTimeBasePeriod(EPWM8_BASE, period);
+       // Print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
 
-       // wait 0.06 seconds (I think)
-       DEVICE_DELAY_US(100000);
+        // calculate period with hr resolution:
+        // 1. 55975 * 861 / period ... we know 55975 corresponds to 861 period count
+        // 2. subtract 13108, bc that is the basically 0 Hz (baseline), then divide by 793 bc that is about 1 Hz
+        hrPeriodPrint = (48194475/period) - ((PeriodFine - 13108)/793);
 
-       // increment period counter (times the period has incremented and how many frequencies have been covered)
-       periodCnt++;
+        // This is freq but trying to trick sci... I don't why it sends extra characters from this write if I use freq or
+        // any other character array
+        rawADCvolt = "       ";
+        my_itoa(hrPeriodPrint, rawADCvolt);
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)rawADCvolt, 8);
+        msg = "\n";
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+
+        // read and send ADC reading
+        readAndSendADC();
+
+//        rawADCvolt = "       ";
+//        my_itoa(voltADC_avg, rawADCvolt);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)rawADCvolt, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+//
+//        rawADCcurr = "       ";
+//        my_itoa(currADC_avg, rawADCcurr);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)rawADCcurr, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+//
+//        volt = "       ";
+//        my_itoa((uint16_t)volts, volt);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)volt, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+//
+//        currString = "       ";
+//        my_itoa((uint16_t)(curr), currString);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)currString, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+//
+//        powerString = "       ";
+//        my_itoa(uint16_tPower, powerString);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)powerString, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+//
+//        impedanceString = "       ";
+//        my_itoa(uint16_tImpedance, impedanceString);
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)impedanceString, 8);
+//        msg = "\n";
+//        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+
+        // wait (100000 = 0.6 seconds I think)
+        DEVICE_DELAY_US(200000);
    }
 
    // Beep buzzer twice indicating end
@@ -696,39 +690,39 @@ void readAndSendADC(){
     // print values for python GUI to read: adcvolt, adccurr, volts, curr, impedance, power
     rawADCvolt = "       ";
     my_itoa(voltADC_avg, rawADCvolt);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCvolt, 8);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)rawADCvolt, 8);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     rawADCcurr = "       ";
     my_itoa(currADC_avg, rawADCcurr);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)rawADCcurr, 8);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)rawADCcurr, 8);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     volt = "       ";
     my_itoa((uint16_t)volts, volt);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)volt, 8);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)volt, 8);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     currString = "       ";
     my_itoa((uint16_t)(curr), currString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)currString, 8);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)currString, 8);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
-
-    powerString = "       ";
-    my_itoa(uint16_tPower, powerString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)powerString, 8);
-    msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     impedanceString = "       ";
     my_itoa(uint16_tImpedance, impedanceString);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)impedanceString, 8);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)impedanceString, 8);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
+
+    powerString = "       ";
+    my_itoa(uint16_tPower, powerString);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)powerString, 8);
+    msg = "\n";
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
 }
 
@@ -745,123 +739,146 @@ void sendSettingsVals(){
     // pruint16_t freq value for python GUI to read
     my_itoa(hrPeriodPrint, freq);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
     // pruint16_t DAC
     my_itoa((uint16_t)dacInVolts, dac);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)dac, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)dac, 7);
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
 }
 
 void powerTrackAndSend(){
-
-    uint16_t prevPower3 = 0;
-    uint16_t prevPower2 = 0;
-    uint16_t prevPower1 = 0;
-    uint16_t currPower = 0;
-    uint16_t nextPower1 = 0;
-    uint16_t nextPower2 = 0;
-    uint16_t nextPower3 = 0;
-
-    uint16_t prevPowTotal = 0;
-    uint16_t nextPowTotal = 0;
-    uint16_t currPowTotal = 0;
-
-    uint16_t prev3Period = period - 3;
-    uint16_t prev2Period = period - 2;
-    uint16_t prev1Period = period - 1;
-    uint16_t currPeriod = period;
-    uint16_t next1Period = period + 1;
-    uint16_t next2Period = period + 2;
-    uint16_t next3Period = period + 3;
-
-    // turn on LEDs to indicate start of power tracking
-    GPIO_writePin(2, 1);
-    GPIO_writePin(3, 1);
-    GPIO_writePin(5, 1);
-    GPIO_writePin(6, 1);
-
-    // Beep buzzer three times (1st one long) indicating start of power tracking
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(400000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-
-    uint16_t i = 0;
-    for(i=0;i<200;i++){
-
-        prevPower3 = powerAtPeriod(prev3Period);
-        prevPower2 = powerAtPeriod(prev2Period);
-        prevPower1 = powerAtPeriod(prev1Period);
-        currPower = powerAtPeriod(currPeriod);
-        nextPower1 = powerAtPeriod(next1Period);
-        nextPower2 = powerAtPeriod(next2Period);
-        nextPower3 = powerAtPeriod(next3Period);
-
-        prevPowTotal = prevPower3 + prevPower2 + prevPower1;
-        nextPowTotal = nextPower3 + nextPower2 + nextPower1;
-        currPowTotal = currPower * 3;
-
-        // check if previous power or next power are greater than current power
-        if(prevPowTotal > currPowTotal || nextPowTotal > currPowTotal){
-            if(prevPowTotal > nextPowTotal){
-                // set currPeriod to prevPeriod since it has more power than next and curr, and adjust other period vars
-                currPeriod = prev1Period;
-                prev3Period = currPeriod - 3;
-                prev2Period = currPeriod - 2;
-                prev1Period = currPeriod - 1;
-                next1Period = currPeriod + 1;
-                next2Period = currPeriod + 2;
-                next3Period = currPeriod + 3;
-            }
-            else{
-                // set currPeriod to nextPeriod since it has more power than prev and curr, and adjust other period vars
-                currPeriod = next1Period;
-                prev3Period = currPeriod - 3;
-                prev2Period = currPeriod - 2;
-                prev1Period = currPeriod - 1;
-                next1Period = currPeriod + 1;
-                next2Period = currPeriod + 2;
-                next3Period = currPeriod + 3;
-            }
-        }
-
-        // set period to current period and update
-        period = currPeriod - 1;
-        updatePeriod();
-
-        // send settings and adc data to gui for current period
-        sendSettingsVals();
-        readAndSendADC();
-
-        // wait 0.06 seconds (I think)
-//        DEVICE_DELAY_US(100000);
-    }
-
-    // turn off LEDs to indicate end of power tracking
-    GPIO_writePin(2, 0);
-    GPIO_writePin(3, 0);
-    GPIO_writePin(5, 0);
-    GPIO_writePin(6, 0);
-
-    // Beep buzzer twice indicating end of power tracking
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-    DEVICE_DELAY_US(250000);
-    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
-
+//
+//    uint16_t prevPower3 = 0;
+//    uint16_t prevPower2 = 0;
+//    uint16_t prevPower1 = 0;
+//    uint16_t currPower = 0;
+//    uint16_t nextPower1 = 0;
+//    uint16_t nextPower2 = 0;
+//    uint16_t nextPower3 = 0;
+//
+//    uint16_t prevPowTotal = 0;
+//    uint16_t nextPowTotal = 0;
+//    uint16_t currPowTotal = 0;
+//
+//    uint16_t prev3Period = 0;
+//    uint16_t prev2Period = 0;
+//    uint16_t prev1Period = 0;
+//    uint16_t currPeriod = 0;
+//    uint16_t next1Period = 0;
+//    uint16_t next2Period = 0;
+//    uint16_t next3Period = 0;
+//
+//    if(PeriodFine < 0xFDE8){
+//        PeriodFine = PeriodFine + 793; // dec about 1Hz
+//
+//        for(i=1; i<PWM_CH; i++)
+//        {
+//            (*ePWM[i]).TBPRDHR = PeriodFine; //In Q16 format
+//        }
+//    }
+//    else{
+//        // increment sysclk period
+//        period = period + 1;
+//        configHRPWM(period);
+//
+//        // reset PeriodFine to a little more than lowest value
+//        PeriodFine = 0x3334;
+//
+//        for(i=1; i<PWM_CH; i++)
+//        {
+//            (*ePWM[i]).TBPRDHR = PeriodFine; //In Q16 format
+//        }
+//    }
+//
+//
+//    // turn on LEDs to indicate start of power tracking
+//    GPIO_writePin(2, 1);
+//    GPIO_writePin(3, 1);
+//    GPIO_writePin(5, 1);
+//    GPIO_writePin(6, 1);
+//
+//    // Beep buzzer three times (1st one long) indicating start of power tracking
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(400000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//
+//    uint16_t i = 0;
+//    for(i=0;i<200;i++){
+//
+//        prevPower3 = powerAtPeriod(prev3Period);
+//        prevPower2 = powerAtPeriod(prev2Period);
+//        prevPower1 = powerAtPeriod(prev1Period);
+//        currPower = powerAtPeriod(currPeriod);
+//        nextPower1 = powerAtPeriod(next1Period);
+//        nextPower2 = powerAtPeriod(next2Period);
+//        nextPower3 = powerAtPeriod(next3Period);
+//
+//        prevPowTotal = prevPower3 + prevPower2 + prevPower1;
+//        nextPowTotal = nextPower3 + nextPower2 + nextPower1;
+//        currPowTotal = currPower * 3;
+//
+//        // check if previous power or next power are greater than current power
+//        if(prevPowTotal > currPowTotal || nextPowTotal > currPowTotal){
+//            if(prevPowTotal > nextPowTotal){
+//                // set currPeriod to prevPeriod since it has more power than next and curr, and adjust other period vars
+//                currPeriod = prev1Period;
+//                prev3Period = currPeriod - 3;
+//                prev2Period = currPeriod - 2;
+//                prev1Period = currPeriod - 1;
+//                next1Period = currPeriod + 1;
+//                next2Period = currPeriod + 2;
+//                next3Period = currPeriod + 3;
+//            }
+//            else{
+//                // set currPeriod to nextPeriod since it has more power than prev and curr, and adjust other period vars
+//                currPeriod = next1Period;
+//                prev3Period = currPeriod - 3;
+//                prev2Period = currPeriod - 2;
+//                prev1Period = currPeriod - 1;
+//                next1Period = currPeriod + 1;
+//                next2Period = currPeriod + 2;
+//                next3Period = currPeriod + 3;
+//            }
+//        }
+//
+//        // set period to current period and update
+//        period = currPeriod - 1;
+//        updatePeriod();
+//
+//        // send settings and adc data to gui for current period
+//        sendSettingsVals();
+//        readAndSendADC();
+//
+//        // wait 0.06 seconds (I think)
+////        DEVICE_DELAY_US(100000);
+//    }
+//
+//    // turn off LEDs to indicate end of power tracking
+//    GPIO_writePin(2, 0);
+//    GPIO_writePin(3, 0);
+//    GPIO_writePin(5, 0);
+//    GPIO_writePin(6, 0);
+//
+//    // Beep buzzer twice indicating end of power tracking
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_HIGH, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//    DEVICE_DELAY_US(250000);
+//    EPWM_setActionQualifierAction(EPWM3_BASE, EPWM_AQ_OUTPUT_A, EPWM_AQ_OUTPUT_LOW, EPWM_AQ_OUTPUT_ON_TIMEBASE_UP_CMPA);
+//
 }
 
 uint16_t powerAtPeriod(uint16_t testPeriod){
@@ -964,43 +981,43 @@ void drawSonic(uint16_t smile){
 
     // draw sonic
     msg = "\r\n     ___------__        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n |\\__-- /\\       _-   \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n |/    __      -        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n //\\  /  \\    /__     \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n |  o|  0|__     --_    \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     // change sonic's mouth
     if(smile == 0){
         msg = "\r\n \\\\____-- __ \\   ___-\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
         msg = "\r\n (@@    []   / /_       \0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     }
     else{
         msg = "\r\n \\\\____-- __ \\   ___-\0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
         msg = "\r\n (@@    __/  / /_       \0";
-        SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+        SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     }
     msg = "\r\n  -_____---   --_       \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n   //  \\ \\\\   ___-   \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n //|\\__/  \\\\  \\     \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n \\_-\\_____/  \\-\\      \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n       // \\\\--\\|           \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n  ____//  ||_          \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
     msg = "\r\n /_____\\ /___\\        \0";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 25);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 25);
 }
 
 // Implementation of itoa()
@@ -1262,27 +1279,27 @@ void readAndSetFreq(){
     unsigned char *readFreq;
     readFreq = "     ";
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
 //    char receivedCharuint16_tString = (char)receivedCharuint16_t;
     readFreq[0] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
 //    receivedCharuint16_tString = (char)receivedCharuint16_t;
     readFreq[1] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
 //    receivedCharuint16_tString = (char)receivedCharuint16_t;
     readFreq[2] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
 //    receivedCharuint16_tString = (char)receivedCharuint16_t;
     readFreq[3] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
 //    receivedCharuint16_tString = (char)receivedCharuint16_t;
     readFreq[4] = (char)receivedCharuint16_t;
@@ -1377,11 +1394,11 @@ void readAndSetFreq(){
     my_itoa(hrPeriodPrint, freq);
 
     // pruint16_t msg
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)freq, 7);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)freq, 7);
 
     // pruint16_t a new line (need for python GUI to know when to stop reading)
     msg = "\n";
-    SCI_writeCharArray(SCIB_BASE, (uint16_t*)msg, 3);
+    SCI_writeCharArray(SCIA_BASE, (uint16_t*)msg, 3);
 
 }
 
@@ -1390,23 +1407,23 @@ void readAndSetStartSweepFreq(){
     unsigned char *readStartFreq;
     readStartFreq = "     ";
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
     readStartFreq[0] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStartFreq[1] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStartFreq[2] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStartFreq[3] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStartFreq[4] = (char)receivedCharuint16_t;
 
@@ -1422,23 +1439,23 @@ void readAndSetStopSweepFreq(){
     unsigned char *readStopFreq;
     readStopFreq = "     ";
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     uint16_t receivedCharuint16_t = (uint16_t)receivedChar;
     readStopFreq[0] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStopFreq[1] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStopFreq[2] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStopFreq[3] = (char)receivedCharuint16_t;
 
-    receivedChar = SCI_readCharBlockingFIFO(SCIB_BASE);
+    receivedChar = SCI_readCharBlockingFIFO(SCIA_BASE);
     receivedCharuint16_t = (uint16_t)receivedChar;
     readStopFreq[4] = (char)receivedCharuint16_t;
 
